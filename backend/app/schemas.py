@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Role = Literal["student", "staff", "admin"]
 
@@ -18,12 +18,11 @@ class FlagDefinition(BaseModel):
     value: Optional[str] = None
     pattern: Optional[str] = Field(default=None, description="Regex pattern when validator=regex")
 
-    @validator("value", always=True)
-    def validate_value(cls, value: Optional[str], values: Dict[str, object]) -> Optional[str]:
-        validator_type: str = values.get("validator", "")  # type: ignore[assignment]
-        if validator_type == "exact" and not value:
+    @model_validator(mode="after")
+    def validate_value(self) -> "FlagDefinition":
+        if self.validator == "exact" and not self.value:
             raise ValueError("Exact validator requires a value")
-        return value
+        return self
 
 
 class LabDefinition(BaseModel):
