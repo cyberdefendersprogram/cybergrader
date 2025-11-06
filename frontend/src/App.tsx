@@ -165,16 +165,16 @@ export default function App() {
         {!user && <LoginForm onSubmit={handleLogin} isSubmitting={isLoading} />}
 
         {user && (
-          <div className="content__grid">
-            <section className="card" style={{ display: "grid", gap: "1.25rem" }}>
-              <div>
+          <>
+            <nav className="subnav" aria-label="User navigation">
+              <div className="subnav__info">
                 <span className="badge">{user.role}</span>
                 <h2 style={{ margin: "0.25rem 0 0" }}>{welcomeMessage}</h2>
                 <p style={{ margin: 0, color: "var(--text-secondary)" }}>
                   Explore the content areas below and submit progress updates in real time.
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div className="subnav__actions">
                 <button type="button" className="secondary-button" onClick={() => loadContent(user.user_id)}>
                   {isLoading ? "Refreshing..." : "Refresh data"}
                 </button>
@@ -182,14 +182,16 @@ export default function App() {
                   Sign out
                 </button>
               </div>
-            </section>
+            </nav>
 
-            <LabsSection labs={labs} onSubmitFlag={handleFlagSubmission} isSubmitting={isLoading} />
-            <QuizzesSection quizzes={quizzes} onSubmitQuiz={handleQuizSubmission} isSubmitting={isLoading} />
-            <ExamsSection exams={exams} onSubmitExam={handleExamSubmission} isSubmitting={isLoading} />
-            <DashboardSection summary={summary} />
-            <NotesSection note={note} />
-          </div>
+            <div className="content__grid">
+              <LabsSection labs={labs} onSubmitFlag={handleFlagSubmission} isSubmitting={isLoading} />
+              <QuizzesSection quizzes={quizzes} onSubmitQuiz={handleQuizSubmission} isSubmitting={isLoading} />
+              <ExamsSection exams={exams} onSubmitExam={handleExamSubmission} isSubmitting={isLoading} />
+              <DashboardSection summary={summary} />
+              <NotesSection note={note} />
+            </div>
+          </>
         )}
       </main>
     </div>

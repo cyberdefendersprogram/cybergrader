@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "tsc && vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4173"
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "e2e": "playwright test",
+    "e2e:setup": "playwright install"
   },
   "dependencies": {
     "dompurify": "^3.0.8",
@@ -19,6 +21,7 @@
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.4",
+    "@playwright/test": "^1.48.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.0"
   }

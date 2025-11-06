@@ -79,6 +79,33 @@ body {
   padding: 0 1.5rem 4rem;
 }
 
+/* Top navigation for signed-in users */
+.subnav {
+  max-width: 1120px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-xl);
+}
+
+.subnav__info {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.subnav__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .content__grid {
   max-width: 1120px;
   margin: 0 auto;
@@ -305,13 +332,18 @@ button:disabled {
   .content__grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
+  /* Default all cards to full width on desktop unless specified */
+  .content__grid > .card {
+    grid-column: span 12;
+  }
 
+  /* With nav separated, make first two sections share the row */
   .content__grid > .card:nth-child(1) {
-    grid-column: span 5;
+    grid-column: span 7;
   }
 
   .content__grid > .card:nth-child(2) {
-    grid-column: span 7;
+    grid-column: span 5;
   }
 
   .content__grid > .card:nth-child(3) {

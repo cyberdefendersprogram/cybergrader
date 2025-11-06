@@ -14,24 +14,17 @@ import type {
 const deriveApiBase = (): string => {
   const envBase = import.meta.env.VITE_API_BASE as string | undefined;
 
-  if (typeof window === "undefined") {
-    return envBase ?? "";
+  // 1) Explicit global override wins (e.g., for tests)
+  if (typeof window !== "undefined") {
+    const globalOverride = (window as typeof window & { __API_BASE__?: string }).__API_BASE__;
+    if (globalOverride) return globalOverride;
   }
 
-  const globalOverride = (window as typeof window & { __API_BASE__?: string }).__API_BASE__;
-  if (globalOverride) {
-    return globalOverride;
-  }
+  // 2) Vite env var next
+  if (envBase) return envBase;
 
-  if (envBase) {
-    return envBase;
-  }
-
-  if (window.location.port === "5173") {
-    return `${window.location.protocol}//${window.location.hostname}:8000`;
-  }
-
-  return window.location.origin;
+  // 3) Default: backend runs at localhost:8000
+  return "http://localhost:8000";
 };
 
 export const API_BASE = deriveApiBase();
