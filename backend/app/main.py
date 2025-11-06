@@ -218,7 +218,7 @@ async def sync_content(db: store.InMemoryStore = Depends(get_store)) -> schemas.
 async def export_scores(db: store.InMemoryStore = Depends(get_store)) -> schemas.ExportResponse:
     export_payload = db.export_all()
     google_result = google_sync.sync_scores_to_sheet(export_payload)
-    return schemas.ExportResponse(**export_payload.model_dump(), google_sync=google_result)
+    return schemas.ExportResponse(**export_payload.dict(), google_sync=google_result)
 
 
 # ---------------------------------------------------------------------------
