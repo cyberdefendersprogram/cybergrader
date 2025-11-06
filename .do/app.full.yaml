@@ -1,5 +1,5 @@
 name: cybergrader-full
-region: nyc
+region: sfo3
 services:
   - name: api
     dockerfile_path: Dockerfile
@@ -28,4 +28,3 @@ services:
 # - Dockerfile builds the frontend (Vite) in a multi-stage step and copies /frontend/dist
 #   into the image. FastAPI serves it automatically when present.
 # - Provide DATABASE_URL as a Managed Database connection string (sslmode=require).
-

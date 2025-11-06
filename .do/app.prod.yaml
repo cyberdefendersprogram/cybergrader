@@ -1,5 +1,5 @@
 name: cybergrader
-region: nyc
+region: sfo3
 services:
   - name: api
     dockerfile_path: Dockerfile
@@ -25,4 +25,3 @@ services:
       - key: CONTENT_REPO_BRANCH
         scope: RUN_AND_BUILD_TIME
         value: main
-

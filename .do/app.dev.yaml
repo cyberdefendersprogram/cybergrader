@@ -1,5 +1,5 @@
 name: cybergrader-demo
-region: nyc
+region: sfo3
 services:
   - name: api
     dockerfile_path: Dockerfile
@@ -34,4 +34,3 @@ services:
         value: cybergrader
         scope: RUN_AND_BUILD_TIME
     # Ephemeral storage on App Platform — for demo only
-
