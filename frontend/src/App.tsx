@@ -143,8 +143,7 @@ export default function App() {
         <span className="hero__badge">Cybersecurity learning cockpit</span>
         <h1>Cyber Grader</h1>
         <p>
-          Track cybersecurity mastery across labs, quizzes, and capstone exams. The interface below
-          showcases the full FastAPI + React experience described in the specification.
+          Track cybersecurity mastery across labs, quizzes, and capstone exams. 
         </p>
         <p style={{ marginTop: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
           Connected to <strong>{API_BASE}</strong>
