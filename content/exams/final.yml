@@ -1,0 +1,16 @@
+id: exam-final
+title: Final Practical
+version: 1.0.0
+stages:
+  - id: stage-1
+    title: Reconnaissance
+    description: Document your information gathering process.
+    max_score: 10
+  - id: stage-2
+    title: Exploitation
+    description: Provide evidence of the exploited vulnerability.
+    max_score: 15
+  - id: stage-3
+    title: Post Exploitation
+    description: Summarize remediation recommendations.
+    max_score: 10
