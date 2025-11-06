@@ -8,6 +8,8 @@ from typing import Dict, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import content_loader, google_sync, schemas, store
 
@@ -16,6 +18,8 @@ CONTENT_REPO_URL = os.getenv("CONTENT_REPO_URL", DEFAULT_CONTENT_REPO)
 CONTENT_REPO_BRANCH = os.getenv("CONTENT_REPO_BRANCH", "main")
 CONTENT_REPO_PATH = Path(os.getenv("CONTENT_REPO_PATH", "/tmp/cis53-content"))
 CONTENT_REFRESH_SCHEDULE = os.getenv("CONTENT_REFRESH_SCHEDULE", "nightly")
+
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA", "public")
@@ -230,3 +234,20 @@ async def get_note(note_name: str) -> dict:
 @app.get("/health")
 async def healthcheck() -> dict:
     return {"status": "ok"}
+
+
+if FRONTEND_DIST.exists():
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    async def serve_frontend_index() -> FileResponse:
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend_app(full_path: str) -> FileResponse:
+        candidate = FRONTEND_DIST / full_path
+        if candidate.exists() and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(FRONTEND_DIST / "index.html")

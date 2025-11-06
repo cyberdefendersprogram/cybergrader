@@ -3,7 +3,7 @@
 This repository hosts a minimal implementation of the **Cyber Grader Platform** described in `spec.md`. The MVP is composed of:
 
 * A FastAPI backend (`backend/`) that loads course content from the bundled `content/` directory or a configured Git repository, manages lab/quiz/exam submissions in memory, and exposes REST endpoints for students, staff, and admins.
-* A lightweight React single-page application (`frontend/index.html`) served as a static asset that interacts with the backend API.
+* A polished React + TypeScript single-page application (`frontend/`) built with Vite and served as static assets from the FastAPI backend.
 * Sample course content in Markdown/YAML under `content/` to demonstrate labs, quizzes, exam stages, and lecture notes.
 
 ## Getting started
@@ -28,9 +28,15 @@ The API boots with demo content synced from the local `content/` directory. Auth
 
 ### Frontend SPA
 
-Open `frontend/index.html` in your browser while the API is running on `http://localhost:8000`. Update `window.API_BASE` in the console if the API is hosted on a different origin.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-The SPA supports logging in, viewing labs/quizzes/exams, submitting attempts, and checking the aggregated dashboard.
+The Vite dev server proxies API requests to `http://localhost:8000` so the React application can interact with FastAPI during development. When you are ready to ship static assets, run `npm run build` and the compiled bundle in `frontend/dist/` will be automatically served by the backend (including a catch-all route for client-side navigation).
+
+The UI supports logging in, viewing labs/quizzes/exams, submitting attempts, and checking the aggregated dashboard—now with an updated layout, markdown rendering, and toast notifications.
 
 ### Content structure
 
