@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyber Grader MVP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <style>
+      body {
+        padding: 2rem;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      section {
+        margin-bottom: 2rem;
+        background: #1e293b;
+        border-radius: 1rem;
+        padding: 1.5rem;
+      }
+      pre {
+        background: #0f172a;
+        color: #38bdf8;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        overflow: auto;
+      }
+      .grid {
+        display: grid;
+        gap: 1rem;
+      }
+      @media (min-width: 768px) {
+        .grid-2 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Cyber Grader MVP</h1>
+      <p>An interactive demo of the FastAPI + React experience described in the spec.</p>
+      <div id="root"></div>
+    </main>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+      const { useEffect, useState } = React;
+      const API_BASE = window.API_BASE || "http://localhost:8000";
+
+      function LoginForm({ onLogin }) {
+        const [email, setEmail] = useState("alice@student.edu");
+        const [password, setPassword] = useState("password");
+        const [error, setError] = useState(null);
+
+        async function handleSubmit(event) {
+          event.preventDefault();
+          setError(null);
+          try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password }),
+            });
+            if (!response.ok) {
+              throw new Error("Login failed");
+            }
+            const payload = await response.json();
+            onLogin(payload);
+          } catch (err) {
+            setError(err.message);
+          }
+        }
+
+        return (
+          React.createElement("section", null,
+            React.createElement("h2", null, "Log in"),
+            error && React.createElement("mark", { style: { backgroundColor: "#fca5a5", color: "#0f172a" } }, error),
+            React.createElement("form", { onSubmit: handleSubmit, className: "grid" },
+              React.createElement("label", null, "Email",
+                React.createElement("input", {
+                  type: "email",
+                  value: email,
+                  onChange: (event) => setEmail(event.target.value),
+                  required: true,
+                })
+              ),
+              React.createElement("label", null, "Password",
+                React.createElement("input", {
+                  type: "password",
+                  value: password,
+                  onChange: (event) => setPassword(event.target.value),
+                  required: true,
+                })
+              ),
+              React.createElement("button", { type: "submit" }, "Sign in")
+            )
+          )
+        );
+      }
+
+      function LabList({ labs, onSubmitFlag }) {
+        if (!labs.length) {
+          return React.createElement("p", null, "No labs available yet. Ask staff to sync content.");
+        }
+        return React.createElement("section", null,
+          React.createElement("h2", null, "Labs"),
+          labs.map((lab) => React.createElement(LabCard, { key: lab.id, lab, onSubmitFlag }))
+        );
+      }
+
+      function LabCard({ lab, onSubmitFlag }) {
+        const [flagValues, setFlagValues] = useState({});
+        return React.createElement("article", { style: { marginBottom: "1.5rem" } },
+          React.createElement("header", null,
+            React.createElement("h3", null, `${lab.title} (score ${lab.score}/${lab.total_flags})`),
+            React.createElement("small", null, `Version ${lab.version}`)
+          ),
+          React.createElement("div", { dangerouslySetInnerHTML: { __html: marked.parse(lab.instructions) } }),
+          lab.flags && lab.flags.length && React.createElement("div", { className: "grid" },
+            lab.flags.map((flag) => React.createElement("form", {
+              key: flag.name,
+              onSubmit: (event) => {
+                event.preventDefault();
+                onSubmitFlag(lab.id, flag.name, flagValues[flag.name] || "");
+              },
+              className: "grid",
+            },
+              React.createElement("label", null,
+                `${flag.prompt}`,
+                React.createElement("input", {
+                  value: flagValues[flag.name] || "",
+                  onChange: (event) => setFlagValues({ ...flagValues, [flag.name]: event.target.value }),
+                })
+              ),
+              React.createElement("button", { type: "submit" }, "Submit flag")
+            ))
+          )
+        );
+      }
+
+      function QuizList({ quizzes, onSubmitQuiz }) {
+        if (!quizzes.length) {
+          return null;
+        }
+        return React.createElement("section", null,
+          React.createElement("h2", null, "Quizzes"),
+          quizzes.map((quiz) => React.createElement(QuizCard, { key: quiz.id, quiz, onSubmitQuiz }))
+        );
+      }
+
+      function QuizCard({ quiz, onSubmitQuiz }) {
+        const [answers, setAnswers] = useState({});
+        return React.createElement("article", { style: { marginBottom: "1.5rem" } },
+          React.createElement("header", null,
+            React.createElement("h3", null, quiz.title),
+            React.createElement("small", null, `Version ${quiz.version}`)
+          ),
+          quiz.questions.map((question) => React.createElement("div", { key: question.id },
+            React.createElement("p", null, question.prompt),
+            question.type === "multiple_choice"
+              ? question.choices.map((choice) => React.createElement("label", { key: choice.key, style: { display: "block" } },
+                  React.createElement("input", {
+                    type: "radio",
+                    name: `${quiz.id}-${question.id}`,
+                    value: choice.key,
+                    checked: answers[question.id] === choice.key,
+                    onChange: (event) => setAnswers({ ...answers, [question.id]: event.target.value }),
+                  }),
+                  ` ${choice.label}`
+                ))
+              : React.createElement("input", {
+                  value: answers[question.id] || "",
+                  onChange: (event) => setAnswers({ ...answers, [question.id]: event.target.value }),
+                })
+          )),
+          React.createElement("button", {
+            onClick: () => onSubmitQuiz(quiz.id, answers),
+          }, "Submit quiz")
+        );
+      }
+
+      function ExamList({ exams, onSubmitExam }) {
+        if (!exams.length) {
+          return null;
+        }
+        return React.createElement("section", null,
+          React.createElement("h2", null, "Final Exam"),
+          exams.map((exam) => React.createElement(ExamCard, { key: exam.id, exam, onSubmitExam }))
+        );
+      }
+
+      function ExamCard({ exam, onSubmitExam }) {
+        const [answers, setAnswers] = useState({});
+        const [activeStage, setActiveStage] = useState(exam.stages[0]?.id);
+        const stage = exam.stages.find((item) => item.id === activeStage);
+        if (!stage) {
+          return null;
+        }
+        return React.createElement("article", null,
+          React.createElement("header", null,
+            React.createElement("h3", null, exam.title),
+            React.createElement("small", null, `Version ${exam.version}`)
+          ),
+          React.createElement("select", {
+            value: activeStage,
+            onChange: (event) => setActiveStage(event.target.value),
+          },
+            exam.stages.map((item) => React.createElement("option", { key: item.id, value: item.id }, item.title))
+          ),
+          React.createElement("p", null, stage.description),
+          React.createElement("textarea", {
+            rows: 4,
+            value: answers[stage.id] || "",
+            onChange: (event) => setAnswers({ ...answers, [stage.id]: event.target.value }),
+          }),
+          React.createElement("button", {
+            onClick: () => onSubmitExam(exam.id, stage.id, answers[stage.id] || ""),
+          }, "Submit stage")
+        );
+      }
+
+      function Dashboard({ summary }) {
+        if (!summary) {
+          return null;
+        }
+        return React.createElement("section", null,
+          React.createElement("h2", null, "Progress Overview"),
+          React.createElement("div", { className: "grid grid-2" },
+            React.createElement("div", null,
+              React.createElement("h3", null, "Lab Progress"),
+              summary.labs.map((lab) => React.createElement("p", { key: lab.id }, `${lab.title}: ${lab.score}/${lab.total_flags}`))
+            ),
+            React.createElement("div", null,
+              React.createElement("h3", null, "Quiz History"),
+              summary.quizzes.length
+                ? summary.quizzes.map((quiz, index) => React.createElement("p", { key: index }, `${quiz.quiz_id}: ${quiz.score}/${quiz.max_score}`))
+                : React.createElement("p", null, "No quiz submissions yet."),
+              React.createElement("h3", null, "Exam History"),
+              summary.exams.length
+                ? summary.exams.map((exam, index) => React.createElement("p", { key: index }, `${exam.exam_id} - ${exam.stage_id}: ${exam.score}/${exam.max_score}`))
+                : React.createElement("p", null, "No exam submissions yet.")
+            )
+          )
+        );
+      }
+
+      function NotesViewer({ note }) {
+        if (!note) {
+          return null;
+        }
+        return React.createElement("section", null,
+          React.createElement("h2", null, "Lecture Notes"),
+          React.createElement("h3", null, note.name),
+          React.createElement("div", { dangerouslySetInnerHTML: { __html: marked.parse(note.body) } })
+        );
+      }
+
+      function App() {
+        const [user, setUser] = useState(null);
+        const [labs, setLabs] = useState([]);
+        const [quizzes, setQuizzes] = useState([]);
+        const [exams, setExams] = useState([]);
+        const [summary, setSummary] = useState(null);
+        const [note, setNote] = useState(null);
+        const [message, setMessage] = useState(null);
+
+        useEffect(() => {
+          if (!user) return;
+          refreshContent();
+          fetch(`${API_BASE}/notes/lecture-01`).then((response) => response.json()).then(setNote);
+        }, [user]);
+
+        async function refreshContent() {
+          if (!user) return;
+          const labResponse = await fetch(`${API_BASE}/labs?user_id=${user.user_id}`);
+          const labsPayload = await labResponse.json();
+          setLabs(labsPayload);
+          const quizResponse = await fetch(`${API_BASE}/quizzes`);
+          setQuizzes(await quizResponse.json());
+          const examResponse = await fetch(`${API_BASE}/exams`);
+          setExams(await examResponse.json());
+          const dashboardResponse = await fetch(`${API_BASE}/dashboard/${user.user_id}`);
+          setSummary(await dashboardResponse.json());
+        }
+
+        async function handleFlagSubmission(labId, flagName, submission) {
+          const response = await fetch(`${API_BASE}/labs/${labId}/flags/${flagName}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user.user_id, submission }),
+          });
+          const payload = await response.json();
+          setMessage(payload.correct ? "Flag accepted!" : "Try again.");
+          refreshContent();
+        }
+
+        async function handleQuizSubmission(quizId, answers) {
+          const payload = {
+            user_id: user.user_id,
+            answers: Object.entries(answers).map(([question_id, answer]) => ({ question_id, answer })),
+          };
+          const response = await fetch(`${API_BASE}/quizzes/${quizId}/submit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const result = await response.json();
+          setMessage(`Quiz scored ${result.score}/${result.max_score}`);
+          refreshContent();
+        }
+
+        async function handleExamSubmission(examId, stageId, answer) {
+          const response = await fetch(`${API_BASE}/exams/${examId}/submit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: user.user_id, stage_id: stageId, answers: { response: answer } }),
+          });
+          const result = await response.json();
+          setMessage(`Exam stage stored with score ${result.score}/${result.max_score}`);
+          refreshContent();
+        }
+
+        async function handleLogin(payload) {
+          setUser(payload);
+          setMessage(`Logged in as ${payload.user_id} (${payload.role})`);
+          const labsResponse = await fetch(`${API_BASE}/labs?user_id=${payload.user_id}`);
+          const labsData = await labsResponse.json();
+          setLabs(labsData);
+          const quizResponse = await fetch(`${API_BASE}/quizzes`);
+          setQuizzes(await quizResponse.json());
+          const examResponse = await fetch(`${API_BASE}/exams`);
+          setExams(await examResponse.json());
+          const dashboardResponse = await fetch(`${API_BASE}/dashboard/${payload.user_id}`);
+          setSummary(await dashboardResponse.json());
+          const noteResponse = await fetch(`${API_BASE}/notes/lecture-01`);
+          setNote(await noteResponse.json());
+        }
+
+        return (
+          React.createElement(React.Fragment, null,
+            !user && React.createElement(LoginForm, { onLogin: handleLogin }),
+            user && React.createElement("section", null,
+              React.createElement("h2", null, `Hello ${user.user_id}`),
+              React.createElement("p", null, `Role: ${user.role}`),
+              React.createElement("button", { onClick: () => (window.location.href = window.location.href) }, "Sign out")
+            ),
+            message && React.createElement("aside", null, message),
+            user && React.createElement(LabList, { labs, onSubmitFlag: handleFlagSubmission }),
+            user && React.createElement(QuizList, { quizzes, onSubmitQuiz: handleQuizSubmission }),
+            user && React.createElement(ExamList, { exams, onSubmitExam: handleExamSubmission }),
+            user && React.createElement(Dashboard, { summary }),
+            user && React.createElement(NotesViewer, { note })
+          )
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+    </script>
+  </body>
+</html>

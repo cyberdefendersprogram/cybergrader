@@ -1,0 +1,21 @@
+id: quiz-basics
+title: Platform Basics
+version: 1.0.0
+questions:
+  - id: q1
+    prompt: Which service powers authentication in Cyber Grader?
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Firebase
+      - key: b
+        label: Supabase
+      - key: c
+        label: Auth0
+    answer: b
+    points: 2
+  - id: q2
+    prompt: Name the Python framework used for the API.
+    type: short_answer
+    answer: fastapi
+    points: 2

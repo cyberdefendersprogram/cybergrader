@@ -1,0 +1,13 @@
+id: lab-hello
+title: Orientation Lab
+version: 1.0.0
+instructions: labs/hello-lab.md
+flags:
+  - name: greet
+    prompt: Submit the onboarding flag from the terminal output.
+    validator: exact
+    value: FLAG{hello-world}
+  - name: regex_flag
+    prompt: Provide any adjective-based flag shaped like `FLAG{adjective-regex}`.
+    validator: regex
+    pattern: ^FLAG\{[a-z]+-regex\}$
