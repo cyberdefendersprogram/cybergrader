@@ -1,3 +1,13 @@
+FROM node:20-alpine AS webbuild
+
+WORKDIR /app/frontend
+
+# Install deps and build frontend
+COPY frontend/package*.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.11-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -21,7 +31,9 @@ RUN pip install --upgrade pip && pip install -r /app/backend/requirements.txt
 # App source
 COPY backend/app /app/backend/app
 
+# Copy built frontend assets into expected location for FastAPI static serving
+COPY --from=webbuild /app/frontend/dist /app/frontend/dist
+
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
