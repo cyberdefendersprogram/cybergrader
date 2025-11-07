@@ -3,7 +3,7 @@
 This repository hosts a minimal implementation of the **Cyber Grader Platform** described in `spec.md`. The MVP is composed of:
 
 * A FastAPI backend (`backend/`) that loads course content from the bundled `content/` directory or a configured Git repository, manages lab/quiz/exam submissions in memory, and exposes REST endpoints for students, staff, and admins.
-* A lightweight React single-page application (`frontend/index.html`) served as a static asset that interacts with the backend API.
+* A polished React + TypeScript single-page application (`frontend/`) built with Vite and served as static assets from the FastAPI backend.
 * Sample course content in Markdown/YAML under `content/` to demonstrate labs, quizzes, exam stages, and lecture notes.
 
 ## Getting started
@@ -28,9 +28,15 @@ The API boots with demo content synced from the local `content/` directory. Auth
 
 ### Frontend SPA
 
-Open `frontend/index.html` in your browser while the API is running on `http://localhost:8000`. Update `window.API_BASE` in the console if the API is hosted on a different origin.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-The SPA supports logging in, viewing labs/quizzes/exams, submitting attempts, and checking the aggregated dashboard.
+The Vite dev server proxies API requests to `http://localhost:8000` so the React application can interact with FastAPI during development. When you are ready to ship static assets, run `npm run build` and the compiled bundle in `frontend/dist/` will be automatically served by the backend (including a catch-all route for client-side navigation). The production Docker image now performs this build step for you, so deployments always ship the latest compiled assets.
+
+The UI supports logging in, viewing labs/quizzes/exams, submitting attempts, and checking the aggregated dashboard—now with an updated layout, markdown rendering, and toast notifications.
 
 ### Content structure
 
@@ -110,8 +116,19 @@ Supabase gives you managed Postgres, authentication, storage, and a built-in RES
 
 Two bash scripts are included so you can ship containers without Terraform:
 
-* `scripts/build-and-push-ecr.sh` – builds the repository image and pushes it to Amazon ECR. The script creates the repository if it does not exist, logs you in with the AWS CLI, and tags the image with `IMAGE_TAG` (defaults to `latest`).
-* `scripts/deploy-hetzner.sh` – targets an existing Hetzner host over SSH, writes a minimal Docker Compose file, and starts the container. Set `BUILD_LOCALLY=1` to build and stream the image over SSH when you do not have a registry.
+* `scripts/build-and-push-ecr.sh` – builds the repository image (including the compiled frontend assets) and pushes it to Amazon ECR. The script creates the repository if it does not exist, logs you in with the AWS CLI, and tags the image with `IMAGE_TAG` (defaults to `latest`).
+* `scripts/deploy-hetzner.sh` – targets an existing Hetzner host over SSH, writes a minimal Docker Compose file, and starts the container. Set `BUILD_LOCALLY=1` to build the Dockerfile locally—which now bundles the frontend—before streaming the image over SSH when you do not have a registry.
+
+### Docker image
+
+The root `Dockerfile` performs a multi-stage build: a Node.js stage runs `npm ci && npm run build` to produce the Vite bundle, and the final Python image installs FastAPI and copies the generated `frontend/dist/` assets. To test locally:
+
+```bash
+docker build -t cybergrader:latest .
+docker run --rm -p 8000:8000 cybergrader:latest
+```
+
+The container exposes port `8000` and launches `uvicorn app.main:app`, automatically serving the bundled static assets.
 
 **Amazon ECR vs. Hetzner Cloud**
 

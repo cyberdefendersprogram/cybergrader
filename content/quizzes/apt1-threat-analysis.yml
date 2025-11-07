@@ -1,0 +1,144 @@
+id: quiz-apt1
+title: APT1 — Advanced Persistent Threat Analysis
+version: 1.0.0
+questions:
+  - id: q1
+    prompt: "What does \"APT\" stand for in cybersecurity?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Automated Packet Transmission
+      - key: b
+        label: Advanced Persistent Threat
+      - key: c
+        label: Application Port Tracker
+      - key: d
+        label: Anonymous Proxy Tunnel
+    answer: b
+    points: 2
+  - id: q2
+    prompt: "What country is APT1 primarily associated with?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Russia
+      - key: b
+        label: North Korea
+      - key: c
+        label: China
+      - key: d
+        label: Iran
+    answer: c
+    points: 2
+  - id: q3
+    prompt: "Which organization first publicly exposed APT1 in a detailed report (2013)?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: FireEye
+      - key: b
+        label: Mandiant
+      - key: c
+        label: CrowdStrike
+      - key: d
+        label: NSA
+    answer: b
+    points: 2
+  - id: q4
+    prompt: "What is the primary mission attributed to APT1 according to the Mandiant report?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Ransomware attacks for profit
+      - key: b
+        label: Long-term cyber espionage to steal intellectual property
+      - key: c
+        label: Financial fraud targeting banks
+      - key: d
+        label: Political disinformation campaigns
+    answer: b
+    points: 2
+  - id: q5
+    prompt: "Which Chinese military unit is linked to APT1?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Unit 8200
+      - key: b
+        label: Unit 61398
+      - key: c
+        label: Unit 74455
+      - key: d
+        label: Unit 101
+    answer: b
+    points: 2
+  - id: q6
+    prompt: "What types of targets did APT1 most often attack?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Gaming servers
+      - key: b
+        label: U.S. and international corporations in key industries (e.g., aerospace, energy, telecom)
+      - key: c
+        label: Personal home networks
+      - key: d
+        label: Academic networks only
+    answer: b
+    points: 2
+  - id: q7
+    prompt: "Which of the following techniques did APT1 commonly use to maintain persistence?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Hardware implants
+      - key: b
+        label: Webshells and remote administration tools (RATs)
+      - key: c
+        label: Drive-by cryptocurrency miners
+      - key: d
+        label: BIOS-level rootkits
+    answer: b
+    points: 2
+  - id: q8
+    prompt: "What network indicators were frequently seen in APT1’s activity?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: DNS tunneling, HTTP beaconing to known command-and-control servers
+      - key: b
+        label: NTP synchronization errors
+      - key: c
+        label: Excessive ARP broadcasts
+      - key: d
+        label: IPv6 routing anomalies
+    answer: a
+    points: 2
+  - id: q9
+    prompt: "Why was the APT1 report significant for the cybersecurity community?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: It was the first confirmed state-sponsored ransomware case
+      - key: b
+        label: It publicly attributed a Chinese military unit to long-term cyber espionage
+      - key: c
+        label: It introduced new cryptographic algorithms
+      - key: d
+        label: It proved zero-trust was ineffective
+    answer: b
+    points: 2
+  - id: q10
+    prompt: "Which defensive actions can organizations take to detect APT1-like threats?"
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Monitor outbound traffic patterns and DNS requests for known C2 domains
+      - key: b
+        label: Disable all antivirus software
+      - key: c
+        label: Avoid software updates
+      - key: d
+        label: Only inspect inbound email traffic
+    answer: a
+    points: 2
