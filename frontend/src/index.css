@@ -213,6 +213,7 @@ button {
   font-size: 0.95rem;
   color: #0f172a;
   background: var(--accent);
+  text-align: right;
   transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
   box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25);
 }
