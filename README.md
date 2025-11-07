@@ -34,7 +34,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev server proxies API requests to `http://localhost:8000` so the React application can interact with FastAPI during development. When you are ready to ship static assets, run `npm run build` and the compiled bundle in `frontend/dist/` will be automatically served by the backend (including a catch-all route for client-side navigation). The production Docker image now performs this build step for you, so deployments always ship the latest compiled assets.
+The Vite dev server proxies API requests to `http://localhost:8000` so the React application can interact with FastAPI during development. When you are ready to ship static assets, run `npm run build` and the compiled bundle in `frontend/dist/` will be automatically served by the backend (including a catch-all route for client-side navigation).
 
 The UI supports logging in, viewing labs/quizzes/exams, submitting attempts, and checking the aggregated dashboard—now with an updated layout, markdown rendering, and toast notifications.
 

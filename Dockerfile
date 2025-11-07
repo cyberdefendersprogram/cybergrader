@@ -1,31 +1,39 @@
-# syntax=docker/dockerfile:1.4
+FROM node:20-alpine AS webbuild
 
-FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend .
+
+# Install deps and build frontend
+COPY frontend/package*.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.11-slim AS runtime
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-WORKDIR /app
+FROM python:3.11-slim AS base
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        git \
-        libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    POETRY_VIRTUALENVS_CREATE=false
 
-COPY backend/requirements.txt backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
+WORKDIR /app/backend
 
-COPY backend backend
-COPY content content
-COPY --from=frontend-build /app/frontend/dist frontend/dist
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# Python deps
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --upgrade pip && pip install -r /app/backend/requirements.txt
+
+# App source
+COPY backend/app /app/backend/app
+
+# Copy built frontend assets into expected location for FastAPI static serving
+COPY --from=webbuild /app/frontend/dist /app/frontend/dist
 
 EXPOSE 8000
-WORKDIR /app/backend
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
