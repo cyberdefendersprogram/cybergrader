@@ -206,20 +206,26 @@ body {
 
 button {
   cursor: pointer;
-  border: none;
-  border-radius: 999px;
-  padding: 0.75rem 1.75rem;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 12px;
+  padding: 0.65rem 1.25rem;
   font-weight: 600;
   font-size: 0.95rem;
   color: #0f172a;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 12px 30px rgba(14, 165, 233, 0.35);
+  background: var(--accent);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25);
 }
 
 button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 40px rgba(14, 165, 233, 0.45);
+  background: var(--accent-strong);
+  transform: translateY(-0.5px);
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.35);
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
 }
 
 button:disabled {
@@ -230,9 +236,14 @@ button:disabled {
 }
 
 .secondary-button {
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.12);
   color: var(--text-primary);
+  border: 1px solid rgba(148, 163, 184, 0.35);
   box-shadow: none;
+}
+
+.secondary-button:hover {
+  background: rgba(148, 163, 184, 0.2);
 }
 
 .login-card {

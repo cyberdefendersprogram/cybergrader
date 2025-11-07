@@ -184,8 +184,8 @@ export default function App() {
             </nav>
 
             <div className="content__grid">
-              <LabsSection labs={labs} onSubmitFlag={handleFlagSubmission} isSubmitting={isLoading} />
               <QuizzesSection quizzes={quizzes} onSubmitQuiz={handleQuizSubmission} isSubmitting={isLoading} />
+              <LabsSection labs={labs} onSubmitFlag={handleFlagSubmission} isSubmitting={isLoading} />
               <ExamsSection exams={exams} onSubmitExam={handleExamSubmission} isSubmitting={isLoading} />
               <DashboardSection summary={summary} />
               <NotesSection note={note} />
