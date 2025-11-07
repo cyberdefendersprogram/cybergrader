@@ -90,7 +90,14 @@ export function QuizzesSection({ quizzes, onSubmitQuiz, isSubmitting }: QuizzesS
               <div key={question.id}>
                 <p style={{ marginBottom: "0.5rem", fontWeight: 600 }}>{question.prompt}</p>
                 {question.type === "multiple_choice" ? (
-                  <div style={{ display: "grid", gap: "0.5rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                      alignItems: "flex-start"
+                    }}
+                  >
                     {question.choices.map((choice) => {
                       const selected = value === choice.key;
                       const selectedAndChecked = selected && correct !== null;
@@ -110,14 +117,18 @@ export function QuizzesSection({ quizzes, onSubmitQuiz, isSubmitting }: QuizzesS
                         <label
                           key={choice.key}
                           style={{
-                            display: "flex",
+                            display: "inline-flex",
                             alignItems: "center",
                             gap: "0.65rem",
                             padding: "0.55rem 0.75rem",
                             borderRadius: "12px",
                             border: `1px solid ${borderColor}`,
                             background: bg,
-                            cursor: "pointer"
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            width: "auto",
+                            maxWidth: "100%",
+                            justifyContent: "flex-start"
                           }}
                         >
                           <input
