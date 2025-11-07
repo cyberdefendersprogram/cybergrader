@@ -351,6 +351,13 @@ button:disabled {
   }
 }
 
+/* Force specific cards to full width on desktop */
+@media (min-width: 960px) {
+  .content__grid > .card.card--full {
+    grid-column: span 12 !important;
+  }
+}
+
 @media (max-width: 720px) {
   .hero {
     padding: 2.75rem 1.25rem 1.5rem;
