@@ -88,10 +88,15 @@ The platform enables students to log in, complete activities, and track progress
 ---
 
 ### 9. **Instructor Dashboard**
-- Content sync controls and validation logs.  
-- Gradebook view (filter by lab/quiz/exam).  
-- Export to CSV / Google Sheets.  
-- Submission detail and regrade tools.  
+- Content sync controls and validation logs.
+- Gradebook view (filter by lab/quiz/exam).
+- Export to CSV / Google Sheets.
+- Submission detail and regrade tools.
 - Audit log viewer (actions, syncs, scores).
 
 ---
+
+### 10. **Deployment & Operations**
+- **Local stack:** `scripts/deploy-local.sh` builds the Docker image, boots the API and Postgres via Docker Compose, and aggregates every container log into `logs/local-deploy.log` for easy troubleshooting.
+- **DigitalOcean App Platform:** `scripts/deploy-digitalocean.sh` generates an App Platform spec that reuses the repo Dockerfile and injects a `DATABASE_URL` sourced from a DigitalOcean Managed Database connection string. The app auto-redeploys on each Git pull while keeping database state in the managed service.
+- **Other targets:** Existing scripts ship images to Amazon ECR or Hetzner with minimal prerequisites.
