@@ -4,7 +4,7 @@ set -euo pipefail
 # Deploy the backend container to DigitalOcean App Platform backed by a managed
 # Postgres database. The script emits an App Platform spec that reuses the
 # repository Dockerfile and wires the DATABASE_URL to an existing DO managed DB
-# connection string or secret.
+# connection string.
 #
 # Requirements:
 #   - doctl (https://docs.digitalocean.com/reference/doctl/) configured with an
@@ -14,9 +14,7 @@ set -euo pipefail
 # Required env:
 #   DO_APP_NAME               App name (e.g., cybergrader)
 #   DO_REGION                 Region slug (e.g., nyc)
-#   DO_DB_CONNECTION_STRING   Full Postgres URL OR set DO_DB_SECRET_NAME instead
-#       or
-#   DO_DB_SECRET_NAME         Name of an App Platform secret containing the URL
+#   DO_DB_CONNECTION_STRING   Full Postgres connection string from DO managed DB
 #
 # Optional env:
 #   DO_APP_ID                 If set, updates existing app; otherwise creates new
@@ -30,8 +28,8 @@ set -euo pipefail
 : "${DO_APP_NAME:?Set DO_APP_NAME}"
 : "${DO_REGION:?Set DO_REGION}"
 
-if [[ -z "${DO_DB_CONNECTION_STRING:-}" && -z "${DO_DB_SECRET_NAME:-}" ]]; then
-  echo "Set DO_DB_CONNECTION_STRING or DO_DB_SECRET_NAME for the managed database" >&2
+if [[ -z "${DO_DB_CONNECTION_STRING:-}" ]]; then
+  echo "Set DO_DB_CONNECTION_STRING for the managed database" >&2
   exit 1
 fi
 
@@ -43,19 +41,11 @@ CONTENT_REPO_BRANCH=${CONTENT_REPO_BRANCH:-main}
 
 SPEC_FILE=${SPEC_FILE:-digitalocean.app.yaml}
 
-if [[ -n "${DO_DB_SECRET_NAME:-}" ]]; then
-  read -r -d '' DATABASE_URL_ENV <<YAML || true
-      - key: DATABASE_URL
-        scope: RUN_TIME
-        secret_name: ${DO_DB_SECRET_NAME}
-YAML
-else
-  read -r -d '' DATABASE_URL_ENV <<YAML || true
+read -r -d '' DATABASE_URL_ENV <<YAML || true
       - key: DATABASE_URL
         scope: RUN_TIME
         value: ${DO_DB_CONNECTION_STRING}
 YAML
-fi
 
 cat > "${SPEC_FILE}" <<YAML
 name: ${DO_APP_NAME}
