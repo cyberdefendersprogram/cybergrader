@@ -114,8 +114,10 @@ Supabase gives you managed Postgres, authentication, storage, and a built-in RES
 
 ### Container images & deployment
 
-Two bash scripts are included so you can ship containers without Terraform:
+Use the provided bash scripts to run the platform locally or ship it to managed infrastructure:
 
+* `scripts/deploy-local.sh` – spins up the local Docker Compose stack (API + Postgres) and streams every container log into `logs/local-deploy.log`. Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to tear down the stack when you are done testing.
+* `scripts/deploy-digitalocean.sh` – publishes the Dockerfile to DigitalOcean App Platform and wires it to an existing **DigitalOcean Managed Database**. Provide either `DO_DB_CONNECTION_STRING` or `DO_DB_SECRET_NAME` so App Platform pulls credentials from the managed database on every deploy triggered by a Git pull.
 * `scripts/build-and-push-ecr.sh` – builds the repository image (including the compiled frontend assets) and pushes it to Amazon ECR. The script creates the repository if it does not exist, logs you in with the AWS CLI, and tags the image with `IMAGE_TAG` (defaults to `latest`).
 * `scripts/deploy-hetzner.sh` – targets an existing Hetzner host over SSH, writes a minimal Docker Compose file, and starts the container. Set `BUILD_LOCALLY=1` to build the Dockerfile locally—which now bundles the frontend—before streaming the image over SSH when you do not have a registry.
 
@@ -141,3 +143,21 @@ The container exposes port `8000` and launches `uvicorn app.main:app`, automatic
 | Compliance | Easier to align with existing AWS guardrails | Need to manage hardening, patching, backups yourself |
 
 For teams already on AWS, using ECR plus Fargate gives you managed scaling and IAM integration. Hetzner is compelling when you want predictable pricing and a simple VM that you control directly. The provided scripts let you evaluate both quickly.
+
+### Local quality checks
+
+Run lightweight checks before committing changes:
+
+```bash
+# Backend: verify modules compile
+cd backend
+python -m compileall app
+
+# Frontend: ensure the production bundle builds
+cd ../frontend
+npm install
+npm run build
+
+# (Optional) Playwright E2E suite – requires the backend running on :8000
+npm run e2e
+```
