@@ -22,11 +22,12 @@ const deriveApiBase = (): string => {
     if (globalOverride) return globalOverride;
   }
 
-  // 2) Vite env var next
+  // 2) Vite env var next (useful for custom deployments)
   if (envBase) return envBase;
 
-  // 3) Default: backend runs at localhost:8000
-  return "http://localhost:8000";
+  // 3) Default to same-origin; Vite dev proxies API to backend, and
+  //    in production the SPA is served by the backend on the same host.
+  return ""; // same-origin
 };
 
 export const API_BASE = deriveApiBase();
