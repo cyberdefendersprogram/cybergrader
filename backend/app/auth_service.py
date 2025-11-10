@@ -97,12 +97,19 @@ class AuthService:
         self._require_db()
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    sql.SQL("UPDATE {} SET student_id=%s, updated_at=NOW() WHERE id=%s" ).format(
-                        self._qualified("users")
-                    ),
-                    (student_id, user_id),
-                )
+                try:
+                    cur.execute(
+                        sql.SQL("UPDATE {} SET student_id=%s, updated_at=NOW() WHERE id=%s" ).format(
+                            self._qualified("users")
+                        ),
+                        (student_id.strip(), user_id),
+                    )
+                except Exception as e:  # unique violation or other DB error
+                    # psycopg 3 specific error code for unique_violation: 23505
+                    code = getattr(e, "sqlstate", None)
+                    if code == "23505":
+                        raise AuthError("Student ID is already in use")
+                    raise
             conn.commit()
 
     # ------------------------------------------------------------------

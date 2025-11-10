@@ -348,6 +348,9 @@ export default function App() {
                       const me = await api.me().catch(() => null);
                       if (me) setMeInfo(me);
                       setToast({ kind: "success", message: "Student ID saved" });
+                    } catch (err) {
+                      const message = err instanceof Error ? err.message : "Could not save Student ID";
+                      setToast({ kind: "error", message });
                     } finally {
                       setIsLoading(false);
                     }

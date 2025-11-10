@@ -264,6 +264,15 @@ class PostgresStore(InMemoryStore):
                         """
                     ).format(self._qualified("users"))
                 )
+                # Ensure uniqueness of non-null student_id values
+                cur.execute(
+                    sql.SQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (student_id) WHERE student_id IS NOT NULL"
+                    ).format(
+                        sql.Identifier(f"{self.schema}_users_student_id_unique"),
+                        self._qualified("users"),
+                    )
+                )
                 cur.execute(
                     sql.SQL(
                         """
