@@ -70,6 +70,12 @@ Notes index and pages are served via `/notes` and `/notes/:name`.
 ### Google Sheets sync
 
 The `/admin/export-scores` endpoint exports all lab, quiz, and exam attempts and, when configured, pushes them to a Google Sheet.
+The sync writes four tabs:
+
+- `Scores` — One row per user (`user_id`) with columns for each lab (`lab:<id>` = correct flags count), quiz (`quiz:<id> (max)` = best score), and exam (`exam:<id> (max)` = best score).
+- `Labs` — Raw lab flag submissions.
+- `Quizzes` — Raw quiz attempts.
+- `Exams` — Raw exam submissions.
 
 Provide the following environment variables before starting the API to enable synchronization:
 

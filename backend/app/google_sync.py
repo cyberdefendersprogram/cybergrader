@@ -5,7 +5,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Set, Tuple
 
 from . import schemas
 
@@ -91,6 +91,73 @@ def _build_rows(export: schemas.ExportResponse) -> tuple[List[List[str]], List[L
     return labs, quizzes, exams
 
 
+def _build_scores_matrix(export: schemas.ExportResponse) -> List[List[str]]:
+    """Build a single-sheet matrix of scores by user across labs/quizzes/exams.
+
+    Notes:
+    - Rows are keyed by `user_id` (email enrichment can be added later if available).
+    - Lab columns show the count of correct flags per lab for the user.
+    - Quiz and exam columns show the best (max) score observed for that item for the user; the header includes max_score.
+    """
+    users: Set[str] = set()
+    lab_ids: Set[str] = set()
+    quiz_ids: Dict[str, int] = {}
+    exam_ids: Dict[str, int] = {}
+
+    for r in export.labs:
+        users.add(r.user_id)
+        lab_ids.add(r.lab_id)
+    for r in export.quizzes:
+        users.add(r.user_id)
+        # Track max possible for header context
+        quiz_ids[r.quiz_id] = max(quiz_ids.get(r.quiz_id, 0), r.max_score)
+    for r in export.exams:
+        users.add(r.user_id)
+        exam_ids[r.exam_id] = max(exam_ids.get(r.exam_id, 0), r.max_score)
+
+    # Prepare headers
+    lab_cols = [f"lab:{lid}" for lid in sorted(lab_ids)]
+    quiz_cols = [f"quiz:{qid} ({quiz_ids[qid]})" for qid in sorted(quiz_ids.keys())]
+    exam_cols = [f"exam:{eid} ({exam_ids[eid]})" for eid in sorted(exam_ids.keys())]
+    header = ["user_id"] + lab_cols + quiz_cols + exam_cols
+
+    # Prepare score containers
+    # labs: count of correct flags
+    lab_scores: Dict[Tuple[str, str], int] = {}
+    for r in export.labs:
+        if r.correct:
+            key = (r.user_id, r.lab_id)
+            lab_scores[key] = lab_scores.get(key, 0) + 1
+
+    # quizzes: best score per user/quiz
+    quiz_scores: Dict[Tuple[str, str], int] = {}
+    for r in export.quizzes:
+        key = (r.user_id, r.quiz_id)
+        quiz_scores[key] = max(quiz_scores.get(key, 0), r.score)
+
+    # exams: best score per user/exam (across stages)
+    exam_scores: Dict[Tuple[str, str], int] = {}
+    for r in export.exams:
+        key = (r.user_id, r.exam_id)
+        exam_scores[key] = max(exam_scores.get(key, 0), r.score)
+
+    # Render rows
+    rows: List[List[str]] = [header]
+    for user in sorted(users):
+        row: List[str] = [user]
+        # labs
+        for lid in sorted(lab_ids):
+            row.append(str(lab_scores.get((user, lid), 0)))
+        # quizzes
+        for qid in sorted(quiz_ids.keys()):
+            row.append(str(quiz_scores.get((user, qid), 0)))
+        # exams
+        for eid in sorted(exam_ids.keys()):
+            row.append(str(exam_scores.get((user, eid), 0)))
+        rows.append(row)
+    return rows
+
+
 def sync_scores_to_sheet(export: schemas.ExportResponse) -> schemas.GoogleSyncResult:
     """Push the export payload to the configured Google Sheet."""
 
@@ -117,6 +184,7 @@ def sync_scores_to_sheet(export: schemas.ExportResponse) -> schemas.GoogleSyncRe
         )
 
     labs_rows, quiz_rows, exam_rows = _build_rows(export)
+    scores_rows = _build_scores_matrix(export)
     timestamp = datetime.utcnow().isoformat(timespec="seconds")
 
     try:
@@ -125,6 +193,7 @@ def sync_scores_to_sheet(export: schemas.ExportResponse) -> schemas.GoogleSyncRe
         body = {
             "valueInputOption": "RAW",
             "data": [
+                {"range": "Scores!A1", "values": scores_rows},
                 {"range": "Labs!A1", "values": labs_rows},
                 {"range": "Quizzes!A1", "values": quiz_rows},
                 {"range": "Exams!A1", "values": exam_rows},
