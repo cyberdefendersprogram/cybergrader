@@ -1,4 +1,4 @@
-import type { DashboardSummary, ExamSubmissionResult, FlagSubmissionResult, QuizSubmissionResult } from "../types";
+import type { DashboardSummary, ExamSubmissionResult, QuizSubmissionResult, LabStatus } from "../types";
 
 interface ActivitySectionProps {
   summary: DashboardSummary | null;
@@ -22,7 +22,7 @@ export function ActivitySection({ summary }: ActivitySectionProps) {
     );
   }
 
-  const labs: FlagSubmissionResult[] = summary.labs || [];
+  const labs: LabStatus[] = summary.labs || [];
   const quizzes: QuizSubmissionResult[] = summary.quizzes || [];
   const exams: ExamSubmissionResult[] = summary.exams || [];
 
@@ -33,26 +33,24 @@ export function ActivitySection({ summary }: ActivitySectionProps) {
 
       <div style={{ display: "grid", gap: "1rem" }}>
         <section>
-          <h4 style={{ margin: 0 }}>Lab submissions</h4>
+          <h4 style={{ margin: 0 }}>Lab progress</h4>
           {labs.length === 0 ? (
-            <p style={{ color: "var(--text-secondary)" }}>No lab flags submitted yet.</p>
+            <p style={{ color: "var(--text-secondary)" }}>No labs available yet.</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   <th align="left">Lab</th>
-                  <th align="left">Flag</th>
-                  <th align="left">Result</th>
-                  <th align="left">When</th>
+                  <th align="left">Solved</th>
+                  <th align="left">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {labs.map((r, i) => (
+                {labs.map((l, i) => (
                   <tr key={`lab-${i}`}>
-                    <td>{r.lab_id}</td>
-                    <td>{r.flag_name}</td>
-                    <td>{r.correct ? "✅ Correct" : "❌ Incorrect"}</td>
-                    <td>{toLocal(r.submitted_at)}</td>
+                    <td>{l.id}</td>
+                    <td>{l.score}</td>
+                    <td>{l.total_flags}</td>
                   </tr>
                 ))}
               </tbody>
@@ -121,4 +119,3 @@ export function ActivitySection({ summary }: ActivitySectionProps) {
     </div>
   );
 }
-
