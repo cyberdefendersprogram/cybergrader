@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, API_BASE } from "./api";
+import { api, API_BASE, HttpError } from "./api";
 import { ExamsSection } from "./components/ExamsSection";
 import { DashboardSection } from "./components/DashboardSection";
 import { LabsSection } from "./components/LabsSection";
@@ -137,6 +137,29 @@ export default function App() {
     setToast({ kind: "info", message: "Signed out" });
   }, []);
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleSync = useCallback(async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const result = await api.syncContent(user.role);
+      setToast({
+        kind: "success",
+        message: `Synced content: labs=${result.labs}, quizzes=${result.quizzes}, exams=${result.exams}`
+      });
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 403) {
+        setToast({ kind: "error", message: "Forbidden: only staff/admin can sync content" });
+      } else {
+        const message = err instanceof Error ? err.message : "Sync failed";
+        setToast({ kind: "error", message });
+      }
+    } finally {
+      await loadContent(user.user_id);
+      setIsSyncing(false);
+    }
+  }, [user, loadContent]);
+
   return (
     <div className="app-shell">
       <header className="hero">
@@ -174,6 +197,11 @@ export default function App() {
                 </p>
               </div>
               <div className="subnav__actions">
+                {(user.role === "staff" || user.role === "admin") && (
+                  <button type="button" className="primary-button" onClick={handleSync} disabled={isSyncing}>
+                    {isSyncing ? "Syncing..." : "Sync content"}
+                  </button>
+                )}
                 <button type="button" className="secondary-button" onClick={() => loadContent(user.user_id)}>
                   {isLoading ? "Refreshing..." : "Refresh data"}
                 </button>

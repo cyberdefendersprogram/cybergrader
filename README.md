@@ -57,10 +57,7 @@ content/
 
 Adding new YAML/Markdown files and calling the `/admin/sync` endpoint will refresh the in-memory store.
 
-Set `CONTENT_REPO_URL` to clone course material from a Git repository (defaults to `https://github.com/cyberdefenders/cis53.git`; leave empty to rely on the bundled `content/` folder).
-You can change the branch with `CONTENT_REPO_BRANCH` and the checkout location with `CONTENT_REPO_PATH`. The API refreshes the
-clone during startup and whenever an admin triggers `/admin/sync`. Declare `CONTENT_REFRESH_SCHEDULE=nightly` (or another cron
-hint) to document how often an external scheduler should run the sync job when you automate it outside the UI.
+The backend reads course material from the local `content/` directory in this repository. A staff/admin can trigger a reload by calling `/admin/sync` (the UI provides a "Sync content" button). The API logs how many items were loaded and persists them to the configured Postgres backend.
 
 ### Google Sheets sync
 
@@ -112,14 +109,19 @@ The store expects the following tables to exist (all columns are snake_case and 
 
 Supabase gives you managed Postgres, authentication, storage, and a built-in REST interface. Compared with Amazon RDS you avoid managing separate IAM, connection pooling, or realtime features, but RDS gives you tighter VPC integration and more control over parameter groups. For this MVP, Supabase is the quickest way to match the platform spec because it bundles auth and APIs. You can still point the service at RDS by omitting the Supabase variables and adding a custom store implementation if you need full AWS alignment.
 
-### Container images & deployment
+### Deployment
 
-Use the provided bash scripts to run the platform locally or ship it to managed infrastructure:
+Use the provided scripts to run locally or deploy to managed infrastructure:
 
-* `scripts/deploy-local.sh` – spins up the local Docker Compose stack (API + Postgres) and streams every container log into `logs/local-deploy.log`. Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to tear down the stack when you are done testing.
-* `scripts/deploy-digitalocean.sh` – publishes the Dockerfile to DigitalOcean App Platform and wires it to an existing **DigitalOcean Managed Database**. Provide `DO_DB_CONNECTION_STRING` so App Platform pulls credentials from the managed database on every deploy triggered by a Git pull.
-* `scripts/build-and-push-ecr.sh` – builds the repository image (including the compiled frontend assets) and pushes it to Amazon ECR. The script creates the repository if it does not exist, logs you in with the AWS CLI, and tags the image with `IMAGE_TAG` (defaults to `latest`).
-* `scripts/deploy-hetzner.sh` – targets an existing Hetzner host over SSH, writes a minimal Docker Compose file, and starts the container. Set `BUILD_LOCALLY=1` to build the Dockerfile locally—which now bundles the frontend—before streaming the image over SSH when you do not have a registry.
+- `scripts/deploy-local.sh` – spins up the local Docker Compose stack (API + Postgres) and streams every container log into `logs/local-deploy.log`. Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to tear down the stack when you are done testing.
+- `scripts/deploy-digitalocean.sh` – deploys to DigitalOcean App Platform using a generated spec (no repository YAMLs needed) and connects the app to a **DigitalOcean Managed Database** via `DO_DB_CONNECTION_STRING`. Optionally follows build/deploy/runtime logs similar to the local script.
+- `scripts/build-and-push-ecr.sh` – builds the repository image (including the compiled frontend assets) and pushes it to Amazon ECR. The script creates the repository if it does not exist, logs you in with the AWS CLI, and tags the image with `IMAGE_TAG` (defaults to `latest`).
+- `scripts/deploy-hetzner.sh` – targets an existing Hetzner host over SSH, writes a minimal Docker Compose file, and starts the container. Set `BUILD_LOCALLY=1` to build the Dockerfile locally—which now bundles the frontend—before streaming the image over SSH when you do not have a registry.
+
+### Environment files
+
+- Local dev: copy `.env.example.local` to `.env.local` and edit as needed. The local deploy script auto-loads `.env.local` if present.
+- DigitalOcean: copy `.env.example.do` to `.env.do` and fill in your app name, region, GitHub repo (`owner/name`), branch, and managed database connection string. The DO deploy script loads `.env.do` automatically or derives the repo from your local git remote.
 
 ### Docker image
 

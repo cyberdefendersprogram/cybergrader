@@ -6,17 +6,16 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import content_loader, google_sync, schemas, store
 
-DEFAULT_CONTENT_REPO = "https://github.com/cyberdefenders/cis53.git"
-CONTENT_REPO_URL = os.getenv("CONTENT_REPO_URL", DEFAULT_CONTENT_REPO)
-CONTENT_REPO_BRANCH = os.getenv("CONTENT_REPO_BRANCH", "main")
-CONTENT_REPO_PATH = Path(os.getenv("CONTENT_REPO_PATH", "/tmp/cis53-content"))
+# Always use bundled local content directory for content.
+CONTENT_ROOT = Path(__file__).resolve().parent.parent.parent / "content"
+CONTENT_SOURCE = str(CONTENT_ROOT)
 CONTENT_REFRESH_SCHEDULE = os.getenv("CONTENT_REFRESH_SCHEDULE", "nightly")
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
@@ -25,29 +24,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA", "public")
 DATABASE_BACKUP_SCHEDULE = os.getenv("DATABASE_BACKUP_SCHEDULE", "nightly")
 
-if CONTENT_REPO_URL:
-    from . import repo_sync
-
-    CONTENT_ROOT, CONTENT_REPO_STATUS = repo_sync.prepare_content_repo(
-        CONTENT_REPO_URL, CONTENT_REPO_PATH, CONTENT_REPO_BRANCH
-    )
-    if CONTENT_REPO_STATUS.get("status") == "error":
-        logging.getLogger(__name__).warning(
-            "Falling back to bundled content after repo clone failure"
-        )
-        CONTENT_ROOT = Path(__file__).resolve().parent.parent.parent / "content"
-        CONTENT_SOURCE = str(CONTENT_ROOT)
-        CONTENT_REPO_STATUS = {"status": "local", "source": CONTENT_SOURCE, "branch": None}
-        repo_sync = None  # type: ignore[assignment]
-    else:
-        CONTENT_SOURCE = CONTENT_REPO_URL
-else:
-    CONTENT_ROOT = Path(os.getenv("CONTENT_ROOT", Path(__file__).resolve().parent.parent.parent / "content"))
-    CONTENT_REPO_STATUS = {"status": "local", "source": str(CONTENT_ROOT), "branch": None}
-    CONTENT_SOURCE = str(CONTENT_ROOT)
-    repo_sync = None  # type: ignore[assignment]
-
 app = FastAPI(title="Cyber Grader MVP", version="0.1.0")
+
+# Ensure important app logs appear under Uvicorn's default logging config
+APP_LOG = logging.getLogger("uvicorn.error")
 
 
 def _create_store() -> store.InMemoryStore:
@@ -55,11 +35,10 @@ def _create_store() -> store.InMemoryStore:
         try:
             from .postgres_store import PostgresStore
 
+            APP_LOG.info("Database backend: postgres (schema=%s)", DATABASE_SCHEMA)
             return PostgresStore(DATABASE_URL, CONTENT_ROOT, schema=DATABASE_SCHEMA)
         except Exception:
-            import logging
-
-            logging.getLogger(__name__).exception("Falling back to in-memory store")
+            APP_LOG.exception("Falling back to in-memory store")
 
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
@@ -67,11 +46,11 @@ def _create_store() -> store.InMemoryStore:
         try:
             from .supabase_store import SupabaseStore
 
+            APP_LOG.info("Database backend: supabase")
             return SupabaseStore(supabase_url, supabase_key, CONTENT_ROOT)
         except Exception:
-            import logging
-
-            logging.getLogger(__name__).exception("Falling back to in-memory store")
+            APP_LOG.exception("Falling back to in-memory store")
+    APP_LOG.info("Database backend: memory")
     return store.InMemoryStore(CONTENT_ROOT)
 
 
@@ -89,16 +68,23 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    content_loader.sync_all(
+    result = content_loader.sync_all(
         data_store,
         CONTENT_ROOT,
         content_source=CONTENT_SOURCE,
-        repo_branch=CONTENT_REPO_STATUS.get("branch"),
-        refresh_status=CONTENT_REPO_STATUS.get("status"),
+        repo_branch=None,
+        refresh_status="local",
         refresh_schedule=CONTENT_REFRESH_SCHEDULE,
         backup_schedule=DATABASE_BACKUP_SCHEDULE,
-        refreshed_at=CONTENT_REPO_STATUS.get("refreshed_at"),
+        refreshed_at=None,
     )
+    APP_LOG.info(
+        "Startup content sync completed: labs=%d, quizzes=%d, exams=%d",
+        result.labs,
+        result.quizzes,
+        result.exams,
+    )
+    APP_LOG.info("Content source: %s (status=local, branch=None)", CONTENT_SOURCE)
 
 
 # ---------------------------------------------------------------------------
@@ -196,22 +182,32 @@ async def dashboard(user_id: str, db: store.InMemoryStore = Depends(get_store)) 
 
 
 @app.post("/admin/sync", response_model=schemas.SyncResponse)
-async def sync_content(db: store.InMemoryStore = Depends(get_store)) -> schemas.SyncResponse:
-    repo_status: Optional[dict] = None
-    if CONTENT_REPO_URL and repo_sync:
-        repo_status = repo_sync.refresh_repo(CONTENT_ROOT, CONTENT_REPO_BRANCH, CONTENT_REPO_URL)
-        if repo_status:
-            CONTENT_REPO_STATUS.update({k: v for k, v in repo_status.items() if v is not None})
-    return content_loader.sync_all(
+async def sync_content(
+    db: store.InMemoryStore = Depends(get_store),
+    x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+) -> schemas.SyncResponse:
+    # Minimal role guard for demo auth: only staff/admin may sync
+    if x_user_role not in ("staff", "admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: staff/admin role required")
+    result = content_loader.sync_all(
         db,
         CONTENT_ROOT,
         content_source=CONTENT_SOURCE,
-        repo_branch=(repo_status or CONTENT_REPO_STATUS).get("branch"),
-        refresh_status=(repo_status or CONTENT_REPO_STATUS).get("status"),
+        repo_branch=None,
+        refresh_status="local",
         refresh_schedule=CONTENT_REFRESH_SCHEDULE,
         backup_schedule=DATABASE_BACKUP_SCHEDULE,
-        refreshed_at=(repo_status or CONTENT_REPO_STATUS).get("refreshed_at"),
+        refreshed_at=None,
     )
+    APP_LOG.info(
+        "Manual sync by role=%s from %s (status=local, branch=None): labs=%d, quizzes=%d, exams=%d",
+        x_user_role,
+        result.content_source,
+        result.labs,
+        result.quizzes,
+        result.exams,
+    )
+    return result
 
 
 @app.get("/admin/export-scores", response_model=schemas.ExportResponse)

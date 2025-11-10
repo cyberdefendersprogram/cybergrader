@@ -1,8 +1,8 @@
 # Cyber Grader Platform — Feature Summary (Concise)
 
 ## 🔹 Core Overview
-A containerized **FastAPI + React** application backed by **Supabase** for database, auth, and storage.  
-All course content (labs, quizzes, exams) lives in **separate GitHub repositories** and syncs automatically.  
+A containerized **FastAPI + React** application backed by **Postgres** for persistence.  
+All course content (labs, quizzes, exams) lives in the repository's local **content/** directory and can be reloaded by staff/admin.  
 The platform enables students to log in, complete activities, and track progress — with data synced to **Google Sheets / Google Cloud** for reporting.
 
 ---
@@ -11,10 +11,10 @@ The platform enables students to log in, complete activities, and track progress
 
 ### 1. **Architecture**
 - **Frontend:** React SPA (students + staff UI).  
-- **Backend:** FastAPI API (REST + background jobs).  
-- **Database:** Supabase (Postgres, Auth, RLS, Storage).  
+- **Backend:** FastAPI API (REST).  
+- **Database:** Postgres (Dockerized locally or DigitalOcean Managed Database).  
 - **Containerized:** Docker-based deploys for portability.  
-- **Integrations:** GitHub (content), Google Cloud (storage + Sheets).
+- **Integrations:** Google Sheets export (optional).
 
 ---
 
@@ -29,13 +29,9 @@ The platform enables students to log in, complete activities, and track progress
 ---
 
 ### 3. **Course Content Management**
-- Content pulled from separate GitHub repos:  
-  - `cis53-lab` — lab markdown + flag YAML.  
-  - `cis53-quiz` — YAML quizzes.  
-  - `cis53-exam` — staged final exam definitions.  
-- Admin or cron-based **sync process**:
-  - Fetch from repo → validate → upsert into Supabase.  
-  - Tracks `version`, `source_ref` (commit SHA).  
+- Content loaded from the local repository `content/` folder (YAML + Markdown).  
+- Staff/admin can trigger `/admin/sync` from the UI to reload and persist content into Postgres.  
+- Tracks a daily version string for quick auditing.
 
 ---
 
@@ -66,13 +62,12 @@ The platform enables students to log in, complete activities, and track progress
 
 ---
 
-### 7. **Google Cloud & Sheets Integration**
-- **Google Cloud Storage:** optional backup of submissions and logs.  
-- **Google Sheets Sync:**  
+### 7. **Google Sheets Integration**
+- **Google Sheets Sync (optional):**  
   - Exports `lab_submissions`, `quiz_submissions`, and `exam_results`.  
   - Uses service-account credentials via Sheets API.  
   - Triggered by admin endpoint `/admin/export-scores`.  
-- Optionally run as scheduled background task or manual export.  
+  - Optionally run as scheduled background task or manual export.  
 
 ---
 
@@ -97,6 +92,12 @@ The platform enables students to log in, complete activities, and track progress
 ---
 
 ### 10. **Deployment & Operations**
-- **Local stack:** `scripts/deploy-local.sh` builds the Docker image, boots the API and Postgres via Docker Compose, and aggregates every container log into `logs/local-deploy.log` for easy troubleshooting.
-- **DigitalOcean App Platform:** `scripts/deploy-digitalocean.sh` generates an App Platform spec that reuses the repo Dockerfile and injects a `DATABASE_URL` sourced from a DigitalOcean Managed Database connection string. The app auto-redeploys on each Git pull while keeping database state in the managed service.
+- **Local stack:** `scripts/deploy-local.sh` builds the Docker image, boots the API and Postgres via Docker Compose, and aggregates logs into `logs/local-deploy.log`. If `.env.local` exists it is auto-loaded (see env pattern below).
+- **DigitalOcean App Platform:** `scripts/deploy-digitalocean.sh` generates an App Platform spec and injects `DATABASE_URL` from a DigitalOcean Managed Database connection string. If `.env.do` exists it is auto-loaded. Follows build/deploy/runtime logs by default.
 - **Other targets:** Existing scripts ship images to Amazon ECR or Hetzner with minimal prerequisites.
+
+#### Env file pattern
+- Real env files (`.env.local`, `.env.do`) are not checked in. Examples exist: `.env.example.local`, `.env.example.do`.
+- Copy an example to the real filename and edit. Scripts auto-source them:
+  - Local: `scripts/deploy-local.sh` loads `.env.local` if present and passes it to Compose.
+  - DigitalOcean: `scripts/deploy-digitalocean.sh` loads `.env.do` if present (override with `ENV_FILE_CANDIDATE=/path/file`).

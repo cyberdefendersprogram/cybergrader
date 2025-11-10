@@ -19,6 +19,13 @@ COMPOSE_FILE="${COMPOSE_FILE:-${ROOT_DIR}/docker-compose.yml}"
 LOG_DIR="${LOG_DIR:-${ROOT_DIR}/logs}"
 mkdir -p "${LOG_DIR}"
 LOG_FILE="${LOG_FILE:-${LOG_DIR}/local-deploy.log}"
+ENV_FILE_CANDIDATE="${ENV_FILE_CANDIDATE:-${ROOT_DIR}/.env.local}"
+COMPOSE_ENV_ARGS=()
+
+if [[ -f "${ENV_FILE_CANDIDATE}" ]]; then
+  echo "Using env file: ${ENV_FILE_CANDIDATE}"
+  COMPOSE_ENV_ARGS+=("--env-file" "${ENV_FILE_CANDIDATE}")
+fi
 
 if ! command -v docker &>/dev/null; then
   echo "docker is required to run the local deployment" >&2
@@ -39,10 +46,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "Building and starting services defined in ${COMPOSE_FILE}"
-docker compose -f "${COMPOSE_FILE}" up --build -d
+docker compose -f "${COMPOSE_FILE}" "${COMPOSE_ENV_ARGS[@]}" up --build -d
 
 : > "${LOG_FILE}"
 echo "Streaming logs to ${LOG_FILE} (Ctrl+C to stop)"
-docker compose -f "${COMPOSE_FILE}" logs -f --no-color | tee -a "${LOG_FILE}"
+docker compose -f "${COMPOSE_FILE}" "${COMPOSE_ENV_ARGS[@]}" logs -f --no-color | tee -a "${LOG_FILE}"
 
 popd >/dev/null

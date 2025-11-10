@@ -98,3 +98,16 @@ export interface FlagSubmissionResult {
   flag_name: string;
   submitted_at: string;
 }
+
+export interface SyncResponse {
+  labs: number;
+  quizzes: number;
+  exams: number;
+  version: string;
+  content_source?: string | null;
+  repo_branch?: string | null;
+  refresh_status?: string | null;
+  refresh_schedule?: string | null;
+  backup_schedule?: string | null;
+  refreshed_at?: string | null;
+}

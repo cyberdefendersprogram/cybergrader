@@ -31,6 +31,9 @@ RUN pip install --upgrade pip && pip install -r /app/backend/requirements.txt
 # App source
 COPY backend/app /app/backend/app
 
+# Include local course content in the image so the API can load it
+COPY content /app/content
+
 # Copy built frontend assets into expected location for FastAPI static serving
 COPY --from=webbuild /app/frontend/dist /app/frontend/dist
 

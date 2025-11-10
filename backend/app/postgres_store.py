@@ -13,7 +13,7 @@ from psycopg.rows import dict_row
 from . import schemas
 from .store import InMemoryStore
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 
 class PostgresStore(InMemoryStore):
@@ -27,8 +27,15 @@ class PostgresStore(InMemoryStore):
 
         try:
             self._ensure_schema()
-            self._hydrate_from_postgres()
+            labs, quizzes, exams = self._hydrate_from_postgres()
             self.enabled = True
+            logger.info(
+                "Postgres store enabled (schema=%s); hydrated labs=%d, quizzes=%d, exams=%d",
+                self.schema,
+                len(labs),
+                len(quizzes),
+                len(exams),
+            )
         except Exception:  # pragma: no cover - defensive guard for runtime issues
             logger.exception("Postgres store initialisation failed; operating in-memory only")
 
@@ -242,7 +249,7 @@ class PostgresStore(InMemoryStore):
                     ).format(self._qualified("exam_submissions"))
                 )
 
-    def _hydrate_from_postgres(self) -> None:
+    def _hydrate_from_postgres(self) -> tuple[list[schemas.LabDefinition], list[schemas.QuizDefinition], list[schemas.ExamDefinition]]:
         with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql.SQL("SELECT * FROM {}" ).format(self._qualified("labs")))
@@ -274,6 +281,7 @@ class PostgresStore(InMemoryStore):
                 for row in cur.fetchall():
                     result = self._exam_result_from_row(row)
                     self.exam_attempts[result.user_id].append(result)
+        return labs, quizzes, exams
 
     def _upsert_many(self, table: str, rows: Iterable[tuple], columns: tuple[str, ...]) -> None:
         rows = list(rows)
@@ -298,6 +306,7 @@ class PostgresStore(InMemoryStore):
                 for row in rows:
                     cur.execute(insert_sql, row)
             conn.commit()
+        logger.info("Upserted %d row(s) into %s", len(rows), table)
 
     def _insert(self, table: str, row: tuple, columns: tuple[str, ...]) -> None:
         insert_sql = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
@@ -309,6 +318,7 @@ class PostgresStore(InMemoryStore):
             with conn.cursor() as cur:
                 cur.execute(insert_sql, row)
             conn.commit()
+        logger.debug("Inserted row into %s", table)
 
     # Conversion helpers -------------------------------------------------
     def _lab_from_row(self, row: dict) -> schemas.LabDefinition:

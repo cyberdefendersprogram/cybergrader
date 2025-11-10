@@ -8,7 +8,8 @@ import type {
   LoginResponse,
   NoteDocument,
   QuizDefinition,
-  QuizSubmissionResult
+  QuizSubmissionResult,
+  SyncResponse
 } from "./types";
 
 const deriveApiBase = (): string => {
@@ -29,6 +30,17 @@ const deriveApiBase = (): string => {
 
 export const API_BASE = deriveApiBase();
 
+export class HttpError extends Error {
+  status: number;
+  body?: string;
+  constructor(status: number, message: string, body?: string) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
   const response = await fetch(url, {
@@ -40,8 +52,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request to ${path} failed with ${response.status}`);
+    const text = await response.text();
+    const message = text || `Request to ${path} failed with ${response.status}`;
+    throw new HttpError(response.status, message, text);
   }
 
   if (response.status === 204) {
@@ -89,5 +102,10 @@ export const api = {
       })
     }),
   dashboard: (userId: string) => request<DashboardSummary>(`/dashboard/${encodeURIComponent(userId)}`),
-  getNote: (note: string) => request<NoteDocument>(`/notes/${encodeURIComponent(note)}`)
+  getNote: (note: string) => request<NoteDocument>(`/notes/${encodeURIComponent(note)}`),
+  syncContent: (role: string) =>
+    request<SyncResponse>(`/admin/sync`, {
+      method: "POST",
+      headers: { "X-User-Role": role }
+    })
 };
