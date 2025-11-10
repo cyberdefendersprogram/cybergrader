@@ -72,7 +72,11 @@ Notes index and pages are served via `/notes` and `/notes/:name`.
 The `/admin/export-scores` endpoint exports all lab, quiz, and exam attempts and, when configured, pushes them to a Google Sheet.
 The sync writes four tabs:
 
-- `Scores` — One row per user (`user_id`) with columns for each lab (`lab:<id>` = correct flags count), quiz (`quiz:<id> (max)` = best score), and exam (`exam:<id> (max)` = best score).
+- `Scores` — One row per user with identity columns and per‑item scores:
+  - Identity: `user_id`, `email` (when available), `student_id` (unique when set)
+  - Labs: `lab:<id>` = count of correct flags in that lab
+  - Quizzes: `quiz:<id> (max)` = best score observed for that quiz
+  - Exams: `exam:<id> (max)` = best score observed for that exam
 - `Labs` — Raw lab flag submissions.
 - `Quizzes` — Raw quiz attempts.
 - `Exams` — Raw exam submissions.

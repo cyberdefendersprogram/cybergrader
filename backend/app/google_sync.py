@@ -6,6 +6,13 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
+import os
+try:
+    import psycopg  # type: ignore
+    from psycopg import sql  # type: ignore
+except Exception:  # pragma: no cover
+    psycopg = None  # type: ignore
+    sql = None  # type: ignore
 
 from . import schemas
 
@@ -115,11 +122,34 @@ def _build_scores_matrix(export: schemas.ExportResponse) -> List[List[str]]:
         users.add(r.user_id)
         exam_ids[r.exam_id] = max(exam_ids.get(r.exam_id, 0), r.max_score)
 
+    # Optionally enrich with email / student_id from Postgres users table
+    emails: Dict[str, str] = {}
+    student_ids: Dict[str, str] = {}
+    dsn = os.getenv("DATABASE_URL", "").strip()
+    schema = os.getenv("DATABASE_SCHEMA", "public").strip()
+    if dsn and psycopg is not None and sql is not None:
+        try:
+            with psycopg.connect(dsn) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        sql.SQL("SELECT id, email, student_id FROM {}" ).format(
+                            sql.SQL("{}.{}" ).format(sql.Identifier(schema), sql.Identifier("users"))
+                        )
+                    )
+                    for uid, email, sid in cur.fetchall():
+                        if isinstance(uid, str):
+                            emails[uid] = email or ""
+                            if sid:
+                                student_ids[uid] = sid
+        except Exception:
+            # Best effort enrichment
+            pass
+
     # Prepare headers
     lab_cols = [f"lab:{lid}" for lid in sorted(lab_ids)]
     quiz_cols = [f"quiz:{qid} ({quiz_ids[qid]})" for qid in sorted(quiz_ids.keys())]
     exam_cols = [f"exam:{eid} ({exam_ids[eid]})" for eid in sorted(exam_ids.keys())]
-    header = ["user_id"] + lab_cols + quiz_cols + exam_cols
+    header = ["user_id", "email", "student_id"] + lab_cols + quiz_cols + exam_cols
 
     # Prepare score containers
     # labs: count of correct flags
@@ -144,7 +174,7 @@ def _build_scores_matrix(export: schemas.ExportResponse) -> List[List[str]]:
     # Render rows
     rows: List[List[str]] = [header]
     for user in sorted(users):
-        row: List[str] = [user]
+        row: List[str] = [user, emails.get(user, ""), student_ids.get(user, "")]
         # labs
         for lid in sorted(lab_ids):
             row.append(str(lab_scores.get((user, lid), 0)))
