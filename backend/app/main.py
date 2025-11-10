@@ -8,7 +8,7 @@ from typing import Dict, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import content_loader, google_sync, schemas, store
@@ -294,6 +294,33 @@ async def export_scores(db: store.InMemoryStore = Depends(get_store)) -> schemas
     export_payload = db.export_all()
     google_result = google_sync.sync_scores_to_sheet(export_payload)
     return schemas.ExportResponse(**export_payload.dict(), google_sync=google_result)
+
+
+@app.get("/admin/export-scores.csv", include_in_schema=False)
+async def export_scores_csv(db: store.InMemoryStore = Depends(get_store)) -> StreamingResponse:
+    """Export the pivoted Scores sheet as CSV (rows per user, columns per item)."""
+    export_payload = db.export_all()
+    try:
+        from .google_sync import _build_scores_matrix  # type: ignore
+        import io
+        import csv
+
+        rows = _build_scores_matrix(export_payload)
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        for row in rows:
+            writer.writerow(row)
+        buf.seek(0)
+        return StreamingResponse(
+            buf, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=Scores.csv"}
+        )
+    except Exception:
+        # Fallback: return empty CSV with error note
+        return StreamingResponse(
+            io.StringIO("error,unable to build scores matrix\n"),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=Scores.csv"},
+        )
 
 
 # ---------------------------------------------------------------------------

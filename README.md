@@ -77,6 +77,11 @@ The sync writes four tabs:
   - Labs: `lab:<id>` = count of correct flags in that lab
   - Quizzes: `quiz:<id> (max)` = best score observed for that quiz
   - Exams: `exam:<id> (max)` = best score observed for that exam
+  
+The UI offers two export paths:
+
+- Sync to Google Sheets (when env is configured) — writes Scores + raw tabs.
+- Direct CSV download of the Scores pivot at `/admin/export-scores.csv` (triggered by the Export button in the UI).
 - `Labs` — Raw lab flag submissions.
 - `Quizzes` — Raw quiz attempts.
 - `Exams` — Raw exam submissions.

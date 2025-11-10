@@ -133,6 +133,12 @@ export const api = {
   getNote: (note: string) => request<NoteDocument>(`/notes/${encodeURIComponent(note)}`),
   listNotes: () => request<NoteIndex>("/notes"),
   exportScores: () => request<any>("/admin/export-scores"),
+  exportScoresCsv: async (): Promise<Blob> => {
+    const url = `${API_BASE}/admin/export-scores.csv`;
+    const res = await fetch(url, { headers: { Accept: "text/csv" } });
+    if (!res.ok) throw new Error(`Export failed with ${res.status}`);
+    return await res.blob();
+  },
   syncContent: (role: string) =>
     request<SyncResponse>(`/admin/sync`, {
       method: "POST",

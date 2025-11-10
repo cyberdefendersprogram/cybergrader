@@ -370,17 +370,16 @@ export default function App() {
                       onClick={async () => {
                         setIsLoading(true);
                         try {
-                          const data = await api.exportScores();
-                          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                          const blob = await api.exportScoresCsv();
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement("a");
                           a.href = url;
-                          a.download = `scores-export-${Date.now()}.json`;
+                          a.download = `Scores-${Date.now()}.csv`;
                           document.body.appendChild(a);
                           a.click();
                           a.remove();
                           URL.revokeObjectURL(url);
-                          setToast({ kind: "success", message: "Export ready (JSON downloaded)" });
+                          setToast({ kind: "success", message: "Export ready (CSV downloaded)" });
                         } catch (err) {
                           const message = err instanceof Error ? err.message : "Export failed";
                           setToast({ kind: "error", message });
@@ -389,7 +388,7 @@ export default function App() {
                         }
                       }}
                     >
-                      Export scores
+                      Export scores (CSV)
                     </button>
                   </>
                 )}
