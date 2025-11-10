@@ -9,7 +9,7 @@ from typing import Optional
 import httpx
 import jwt
 import psycopg
-from passlib.hash import bcrypt
+from passlib.context import CryptContext
 from psycopg import sql
 
 
@@ -23,6 +23,9 @@ class AuthService:
         self.schema = schema
         self.secret = os.getenv("SECRET_KEY", "insecure-dev-key")
         self.jwt_algo = "HS256"
+        # Password hashing context: prefer bcrypt_sha256 to safely handle long passwords,
+        # while still accepting legacy bcrypt hashes if present.
+        self.pwd_ctx = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
 
         # Email settings (ForwardEmail API)
         self.fe_api_token = os.getenv("FORWARDEMAIL_API_TOKEN")
@@ -40,7 +43,7 @@ class AuthService:
         self._require_db()
         email_lc = email.strip().lower()
         user_id = str(uuid.uuid4())
-        pw_hash = bcrypt.hash(password)
+        pw_hash = self.pwd_ctx.hash(password)
 
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
@@ -68,7 +71,7 @@ class AuthService:
                     if existing is None:
                         raise AuthError("Unable to create or fetch user")
                     # Allow idempotent signup = login if password matches
-                    if not bcrypt.verify(password, existing[4]):
+                    if not self.pwd_ctx.verify(password, existing[4]):
                         raise AuthError("User already exists")
                     user = {"id": existing[0], "email": existing[1], "role": existing[2], "student_id": existing[3]}
                 else:
@@ -88,7 +91,7 @@ class AuthService:
                     (email_lc,),
                 )
                 row = cur.fetchone()
-                if row is None or not bcrypt.verify(password, row[4]):
+                if row is None or not self.pwd_ctx.verify(password, row[4]):
                     raise AuthError("Invalid credentials")
                 user = {"id": row[0], "email": row[1], "role": row[2], "student_id": row[3]}
         return user
@@ -175,7 +178,7 @@ class AuthService:
                 user_id, expires_at, used_at = row
                 if used_at is not None or expires_at < datetime.now(timezone.utc):
                     raise AuthError("Expired token")
-                pw_hash = bcrypt.hash(new_password)
+                pw_hash = self.pwd_ctx.hash(new_password)
                 cur.execute(
                     sql.SQL("UPDATE {} SET password_hash=%s, updated_at=NOW() WHERE id=%s" ).format(
                         self._qualified("users")
@@ -214,3 +217,5 @@ class AuthService:
     def _require_db(self) -> None:
         if not self.dsn:
             raise AuthError("Database not configured")
+
+    # note: no manual trimming needed; bcrypt_sha256 pre-hashes inputs safely

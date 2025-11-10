@@ -49,4 +49,3 @@ export function SignupForm({ onSubmit, isSubmitting, onLoginNavigate }: SignupFo
     </div>
   );
 }
-
