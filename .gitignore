@@ -213,3 +213,6 @@ logs/
 # Don't share env files
 .env.*
 !.env.example.*
+
+# Generated DigitalOcean spec
+digitalocean.app.yaml
