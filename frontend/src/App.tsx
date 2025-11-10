@@ -7,6 +7,7 @@ import { LoginForm } from "./components/LoginForm";
 import { SignupForm } from "./components/SignupForm";
 import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
 import { ResetPasswordForm } from "./components/ResetPasswordForm";
+import { Onboarding } from "./components/Onboarding";
 import { NotesSection } from "./components/NotesSection";
 import { QuizzesSection } from "./components/QuizzesSection";
 import type {
@@ -255,6 +256,9 @@ export default function App() {
 
         {!user && (
           <>
+            {view === "home" && (
+              <Onboarding onSignup={() => navigate("/signup")} onLogin={() => navigate("/login")} />
+            )}
             {view === "login" && (
               <LoginForm
                 onSubmit={handleLogin}
