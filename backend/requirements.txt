@@ -10,3 +10,4 @@ passlib[bcrypt]==1.7.4
 PyJWT==2.9.0
 # Pin httpx to a version compatible with supabase-py
 httpx==0.24.1
+bcrypt==4.1.3
