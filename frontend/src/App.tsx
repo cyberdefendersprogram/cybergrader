@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, API_BASE, HttpError, setAuthToken } from "./api";
 import { ExamsSection } from "./components/ExamsSection";
 import { DashboardSection } from "./components/DashboardSection";
+import { ActivitySection } from "./components/ActivitySection";
 import { LabsSection } from "./components/LabsSection";
 import { LoginForm } from "./components/LoginForm";
 import { SignupForm } from "./components/SignupForm";
@@ -449,7 +450,7 @@ export default function App() {
             {view === "exams" && (
               <ExamsSection exams={exams} onSubmitExam={handleExamSubmission} isSubmitting={isLoading} />
             )}
-            {view === "activity" && <DashboardSection summary={summary} />}
+            {view === "activity" && <ActivitySection summary={summary} />}
             {view === "notes" && <NotesList navigate={navigate} />}
             {view === "note" && note && <NotesSection note={note} />}
           </>
