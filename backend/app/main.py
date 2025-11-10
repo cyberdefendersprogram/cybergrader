@@ -6,12 +6,13 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi import Depends, FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import content_loader, google_sync, schemas, store
+from .auth_service import AuthService, AuthError
 
 # Always use bundled local content directory for content.
 CONTENT_ROOT = Path(__file__).resolve().parent.parent.parent / "content"
@@ -55,6 +56,7 @@ def _create_store() -> store.InMemoryStore:
 
 
 data_store = _create_store()
+auth_service = AuthService(DATABASE_URL, schema=DATABASE_SCHEMA)
 
 # Allow all origins for the MVP demo environment.
 app.add_middleware(
@@ -88,20 +90,62 @@ async def startup_event() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Authentication (Supabase simulated)
-MOCK_USERS: Dict[str, schemas.Role] = {
-    "alice@student.edu": "student",
-    "sam@staff.edu": "staff",
-    "ada@admin.edu": "admin",
-}
+def _require_auth_header(request: Request) -> dict:
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth.split(" ", 1)[1]
+    try:
+        import jwt
+
+        payload = jwt.decode(token, auth_service.secret, algorithms=["HS256"])  # type: ignore[attr-defined]
+        return payload
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+@app.post("/auth/signup", response_model=schemas.LoginResponse)
+async def signup(payload: schemas.SignupRequest) -> schemas.LoginResponse:
+    try:
+        user = auth_service.signup(payload.email, payload.password)
+        token = auth_service.issue_jwt(user)
+        return schemas.LoginResponse(user_id=user["id"], role=user["role"], token=token)
+    except AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/auth/login", response_model=schemas.LoginResponse)
 async def login(payload: schemas.LoginRequest) -> schemas.LoginResponse:
-    role = MOCK_USERS.get(payload.email, "student")
-    user_id = payload.email.split("@")[0]
-    token = f"demo-token-{user_id}"
-    return schemas.LoginResponse(user_id=user_id, role=role, token=token)
+    try:
+        user = auth_service.login(payload.email, payload.password)
+        token = auth_service.issue_jwt(user)
+        return schemas.LoginResponse(user_id=user["id"], role=user["role"], token=token)
+    except AuthError:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+@app.get("/auth/me", response_model=schemas.MeResponse)
+async def me(request: Request) -> schemas.MeResponse:
+    payload = _require_auth_header(request)
+    # Attempt to fetch the freshest student_id
+    try:
+        import psycopg
+        from psycopg import sql
+
+        with psycopg.connect(DATABASE_URL) as conn:  # type: ignore[arg-type]
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("SELECT email, role, student_id FROM {} WHERE id=%s" ).format(
+                        sql.SQL("{}.{}" ).format(sql.Identifier(DATABASE_SCHEMA), sql.Identifier("users"))
+                    ),
+                    (payload.get("sub"),),
+                )
+                row = cur.fetchone()
+                if row:
+                    return schemas.MeResponse(email=row[0], role=row[1], student_id=row[2])
+    except Exception:
+        pass
+    return schemas.MeResponse(email=payload.get("email"), role=payload.get("role"), student_id=None)
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +252,39 @@ async def sync_content(
         result.exams,
     )
     return result
+
+
+# ---------------------------------------------------------------------------
+# Password reset
+@app.post("/auth/request-password-reset")
+async def request_password_reset(payload: schemas.PasswordResetRequest) -> dict:
+    try:
+        auth_service.request_password_reset(payload.email)
+    except AuthError:
+        pass
+    return {"ok": True}
+
+
+@app.post("/auth/reset-password")
+async def reset_password(payload: schemas.PasswordResetPerform) -> dict:
+    try:
+        auth_service.reset_password(payload.token, payload.new_password)
+        return {"ok": True}
+    except AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Student ID
+@app.post("/profile/student-id")
+async def set_student_id(payload: schemas.StudentIdUpdateRequest, request: Request) -> dict:
+    claims = _require_auth_header(request)
+    user_id = claims.get("sub")
+    try:
+        auth_service.set_student_id(user_id, payload.student_id)
+        return {"ok": True}
+    except AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/admin/export-scores", response_model=schemas.ExportResponse)

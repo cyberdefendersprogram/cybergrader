@@ -157,6 +157,30 @@ class LoginResponse(BaseModel):
     token: str
 
 
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: str
+
+
+class PasswordResetPerform(BaseModel):
+    token: str
+    new_password: str
+
+
+class MeResponse(BaseModel):
+    email: str
+    role: Role
+    student_id: Optional[str] = None
+
+
+class StudentIdUpdateRequest(BaseModel):
+    student_id: str
+
+
 class ExportResponse(BaseModel):
     labs: List[FlagSubmissionResult]
     quizzes: List[QuizSubmissionResult]

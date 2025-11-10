@@ -32,3 +32,10 @@ DATABASE_SCHEMA=public
 
 # Follow logs after deployment (1 or 0)
 FOLLOW_LOGS=1
+
+# Authentication / password reset (ForwardEmail)
+SECRET_KEY=change-me
+FORWARDEMAIL_API_TOKEN=your-forwardemail-api-token
+EMAIL_FROM=no-reply@yourdomain.tld
+# Use your DO ingress + path to your frontend reset page
+RESET_LINK_BASE=https://your-app-name.ondigitalocean.app/reset-password

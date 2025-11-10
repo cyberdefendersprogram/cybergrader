@@ -248,6 +248,36 @@ class PostgresStore(InMemoryStore):
                         """
                     ).format(self._qualified("exam_submissions"))
                 )
+                # Users and password reset tokens for authentication
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS {} (
+                            id TEXT PRIMARY KEY,
+                            email TEXT UNIQUE NOT NULL,
+                            password_hash TEXT NOT NULL,
+                            role TEXT NOT NULL DEFAULT 'student',
+                            student_id TEXT NULL,
+                            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        )
+                        """
+                    ).format(self._qualified("users"))
+                )
+                cur.execute(
+                    sql.SQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS {} (
+                            id BIGSERIAL PRIMARY KEY,
+                            user_id TEXT NOT NULL REFERENCES {}(id) ON DELETE CASCADE,
+                            token TEXT UNIQUE NOT NULL,
+                            expires_at TIMESTAMPTZ NOT NULL,
+                            used_at TIMESTAMPTZ NULL,
+                            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        )
+                        """
+                    ).format(self._qualified("password_reset_tokens"), self._qualified("users"))
+                )
 
     def _hydrate_from_postgres(self) -> tuple[list[schemas.LabDefinition], list[schemas.QuizDefinition], list[schemas.ExamDefinition]]:
         with psycopg.connect(self.dsn, row_factory=dict_row) as conn:

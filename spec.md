@@ -19,12 +19,22 @@ The platform enables students to log in, complete activities, and track progress
 ---
 
 ### 2. **Authentication & Roles**
-- Supabase email/password authentication.  
+- Primary: email (username) + password authentication (bcrypt).  
+  - POST `/auth/signup` creates a user (default role `student`) and stores a bcrypt `password_hash`.
+  - POST `/auth/login` verifies credentials and issues a 24h JWT session (HS256, `SECRET_KEY`).
+  - No email verification for signup in this version.
+- Password reset via email (ForwardEmail API).  
+  - POST `/auth/request-password-reset` generates a short‑lived token and emails a reset link.  
+  - POST `/auth/reset-password` accepts `{ token, new_password }`, validates, and updates the password.
+  - Env: `FORWARDEMAIL_API_TOKEN`, `EMAIL_FROM`, `RESET_LINK_BASE`, `SECRET_KEY`.
 - Roles:  
   - `student`: take labs, quizzes, exams, view progress.  
   - `staff`: sync content, view grades.  
   - `admin`: manage system, exports, configs.  
-- Role-based access enforced via RLS.
+- New signups default to `student`. After first login, students without a `student_id` are prompted to set one.
+- Minimal data model:  
+  - `users(id, email, role, student_id, password_hash, created_at, updated_at)`  
+  - `password_reset_tokens(id, user_id, token, expires_at, used_at, created_at)`
 
 ---
 
@@ -49,7 +59,7 @@ The platform enables students to log in, complete activities, and track progress
 - YAML-based question sets (multiple choice, short answer, etc.).  
 - Auto-grading with per-question scoring.  
 - Versioned quiz content linked to GitHub commit.  
-- Student quiz history stored in Supabase.
+- Student quiz history stored in Postgres.
 
 ---
 
