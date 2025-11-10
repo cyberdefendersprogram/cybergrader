@@ -42,6 +42,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [meInfo, setMeInfo] = useState<{ email: string; role: string; student_id: string | null } | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
 
   const welcomeMessage = useMemo(() => {
     if (!user) return "";
@@ -101,6 +102,25 @@ export default function App() {
     const timeout = window.setTimeout(() => setToast(null), 4000);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  // Ping backend health to show connection light (green/red)
+  useEffect(() => {
+    let cancelled = false;
+    const ping = async () => {
+      try {
+        const res = await fetch(`${API_BASE || ""}/health`);
+        if (!cancelled) setIsConnected(res.ok);
+      } catch {
+        if (!cancelled) setIsConnected(false);
+      }
+    };
+    ping();
+    const id = window.setInterval(ping, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
 
   // Fetch individual note when viewing note detail
   useEffect(() => {
@@ -269,11 +289,21 @@ export default function App() {
       <header className="hero">
         <span className="hero__badge">Cybersecurity learning cockpit</span>
         <h1>Cyber Grader</h1>
-        <p>
-          Track cybersecurity mastery across labs, quizzes, and capstone exams. 
-        </p>
-        <p style={{ marginTop: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-          Connected to <strong>{API_BASE}</strong>
+        <p>Track cybersecurity mastery across labs, quizzes, and capstone exams.</p>
+        <p style={{ marginTop: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem", display: "inline-flex", alignItems: "center", gap: ".5rem" }}>
+          Connected
+          <span
+            title={isConnected ? "Connected" : "Disconnected"}
+            aria-label={isConnected ? "Connected" : "Disconnected"}
+            style={{
+              display: "inline-block",
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: isConnected ? "#22c55e" : "#f87171",
+              boxShadow: isConnected ? "0 0 8px rgba(34,197,94,0.6)" : "0 0 8px rgba(248,113,113,0.6)"
+            }}
+          />
         </p>
       </header>
 
