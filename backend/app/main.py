@@ -20,12 +20,14 @@ CONTENT_SOURCE = str(CONTENT_ROOT)
 CONTENT_REFRESH_SCHEDULE = os.getenv("CONTENT_REFRESH_SCHEDULE", "nightly")
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+VERSION_FILE = Path(__file__).resolve().parent.parent.parent / "VERSION"
+APP_VERSION = VERSION_FILE.read_text().strip() if VERSION_FILE.exists() else "0.0.0"
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA", "public")
 DATABASE_BACKUP_SCHEDULE = os.getenv("DATABASE_BACKUP_SCHEDULE", "nightly")
 
-app = FastAPI(title="Cyber Grader MVP", version="0.1.0")
+app = FastAPI(title="Cyber Grader", version=APP_VERSION)
 
 # Ensure important app logs appear under Uvicorn's default logging config
 APP_LOG = logging.getLogger("uvicorn.error")
@@ -296,6 +298,15 @@ async def export_scores(db: store.InMemoryStore = Depends(get_store)) -> schemas
 
 # ---------------------------------------------------------------------------
 # Notes (markdown content)
+@app.get("/notes")
+async def list_notes() -> dict:
+    notes_dir = CONTENT_ROOT / "notes"
+    names: list[str] = []
+    if notes_dir.exists():
+        for p in sorted(notes_dir.glob("*.md")):
+            names.append(p.stem)
+    return {"notes": names}
+
 @app.get("/notes/{note_name}")
 async def get_note(note_name: str) -> dict:
     note_path = CONTENT_ROOT / "notes" / f"{note_name}.md"
@@ -306,7 +317,7 @@ async def get_note(note_name: str) -> dict:
 
 @app.get("/health")
 async def healthcheck() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}
 
 
 if FRONTEND_DIST.exists():

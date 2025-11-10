@@ -23,9 +23,8 @@ class AuthService:
         self.schema = schema
         self.secret = os.getenv("SECRET_KEY", "insecure-dev-key")
         self.jwt_algo = "HS256"
-        # Password hashing context: prefer bcrypt_sha256 to safely handle long passwords,
-        # while still accepting legacy bcrypt hashes if present.
-        self.pwd_ctx = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
+        # Password hashing context: bcrypt_sha256
+        self.pwd_ctx = CryptContext(schemes=["bcrypt_sha256"])
 
         # Email settings (ForwardEmail API)
         self.fe_api_token = os.getenv("FORWARDEMAIL_API_TOKEN")
@@ -216,6 +215,4 @@ class AuthService:
 
     def _require_db(self) -> None:
         if not self.dsn:
-            raise AuthError("Database not configured")
-
-    # note: no manual trimming needed; bcrypt_sha256 pre-hashes inputs safely
+            raise AuthError("Database not configured") 

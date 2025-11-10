@@ -91,6 +91,10 @@ export interface NoteDocument {
   body: string;
 }
 
+export interface NoteIndex {
+  notes: string[];
+}
+
 export interface FlagSubmissionResult {
   correct: boolean;
   user_id: string;

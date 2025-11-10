@@ -7,6 +7,7 @@ import type {
   LoginRequest,
   LoginResponse,
   NoteDocument,
+  NoteIndex,
   QuizDefinition,
   QuizSubmissionResult,
   SyncResponse
@@ -130,6 +131,7 @@ export const api = {
     }),
   dashboard: (userId: string) => request<DashboardSummary>(`/dashboard/${encodeURIComponent(userId)}`),
   getNote: (note: string) => request<NoteDocument>(`/notes/${encodeURIComponent(note)}`),
+  listNotes: () => request<NoteIndex>("/notes"),
   syncContent: (role: string) =>
     request<SyncResponse>(`/admin/sync`, {
       method: "POST",

@@ -39,8 +39,8 @@ export default function App() {
 
   const welcomeMessage = useMemo(() => {
     if (!user) return "";
-    return `Welcome back, ${user.user_id}`;
-  }, [user]);
+    return meInfo?.email ? `Welcome back, ${meInfo.email}` : `Welcome back`;
+  }, [user, meInfo]);
 
   useEffect(() => {
     // Simple path-based view selection

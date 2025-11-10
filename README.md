@@ -36,7 +36,13 @@ npm run dev
 
 The Vite dev server proxies API requests to `http://localhost:8000` so the React application can interact with FastAPI during development. When you are ready to ship static assets, run `npm run build` and the compiled bundle in `frontend/dist/` will be automatically served by the backend (including a catch-all route for client-side navigation).
 
-The UI supports logging in, viewing labs/quizzes/exams, submitting attempts, and checking the aggregated dashboard—now with an updated layout, markdown rendering, and toast notifications.
+The UI follows a one-screen-per-action model with clear routes:
+
+- `/` — Onboarding for unauthenticated users
+- `/signup`, `/login`, `/forgot-password`, `/reset-password?token=…`
+- After login: `/dashboard`, `/labs(/:id)`, `/quizzes(/:id)`, `/exams(/:id)`, `/activity`, `/notes(/:name)`
+
+The header shows the signed‑in email. Dashboard is summary‑only with CTAs; students are prompted to set a unique `student_id` once. Staff/admin see Sync Content and Export Scores actions.
 
 ### Content structure
 
@@ -58,6 +64,8 @@ content/
 Adding new YAML/Markdown files and calling the `/admin/sync` endpoint will refresh the in-memory store.
 
 The backend reads course material from the local `content/` directory in this repository. A staff/admin can trigger a reload by calling `/admin/sync` (the UI provides a "Sync content" button). The API logs how many items were loaded and persists them to the configured Postgres backend.
+
+Notes index and pages are served via `/notes` and `/notes/:name`.
 
 ### Google Sheets sync
 
@@ -108,6 +116,14 @@ The store expects the following tables to exist (all columns are snake_case and 
 | `exam_submissions` | `user_id text`, `exam_id text`, `stage_id text`, `score integer`, `max_score integer`, `submitted_at timestamptz` |
 
 Supabase gives you managed Postgres, authentication, storage, and a built-in REST interface. Compared with Amazon RDS you avoid managing separate IAM, connection pooling, or realtime features, but RDS gives you tighter VPC integration and more control over parameter groups. For this MVP, Supabase is the quickest way to match the platform spec because it bundles auth and APIs. You can still point the service at RDS by omitting the Supabase variables and adding a custom store implementation if you need full AWS alignment.
+
+### Versioning
+
+The app version is stored in the root `VERSION` file and is exposed by FastAPI (`app.version`) and `/health`.
+
+- Format: `MAJOR.MINOR.PATCH`
+- Current policy: start at `0.0.N`. Increment `N` on every check‑in. Backward‑incompatible changes are allowed until the version explicitly moves to `0.1.N`.
+- Update the `VERSION` file with each change that alters behavior.
 
 ### Deployment
 
