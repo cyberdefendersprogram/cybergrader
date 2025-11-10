@@ -4,7 +4,9 @@ WORKDIR /app/frontend
 
 # Install deps and build frontend
 COPY frontend/package*.json ./
-RUN npm ci --no-audit --no-fund
+# Install git in case any npm dependencies resolve from git sources
+RUN apk add --no-cache git \
+ && npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
@@ -22,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     ca-certificates \
+    git \
   && rm -rf /var/lib/apt/lists/*
 
 # Python deps
