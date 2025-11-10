@@ -30,6 +30,11 @@ const deriveApiBase = (): string => {
 
 export const API_BASE = deriveApiBase();
 
+let AUTH_TOKEN: string | null = null;
+export function setAuthToken(token: string | null) {
+  AUTH_TOKEN = token;
+}
+
 export class HttpError extends Error {
   status: number;
   body?: string;
@@ -46,6 +51,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
+      ...(AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {}),
       ...(init?.headers || {})
     },
     ...init
@@ -65,10 +71,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  signup: (payload: { email: string; password: string }) =>
+    request<LoginResponse>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   login: (payload: LoginRequest) =>
     request<LoginResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify(payload)
+    }),
+  me: () => request<{ email: string; role: string; student_id: string | null }>("/auth/me"),
+  setStudentId: (student_id: string) =>
+    request<{ ok: true }>("/profile/student-id", {
+      method: "POST",
+      body: JSON.stringify({ student_id })
+    }),
+  requestPasswordReset: (email: string) =>
+    request<{ ok: true }>("/auth/request-password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    }),
+  resetPassword: (token: string, new_password: string) =>
+    request<{ ok: true }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password })
     }),
   listLabs: (userId: string) => request<LabStatus[]>(`/labs?user_id=${encodeURIComponent(userId)}`),
   submitFlag: (labId: string, flagName: string, userId: string, submission: string) =>

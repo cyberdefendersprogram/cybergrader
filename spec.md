@@ -111,3 +111,8 @@ The platform enables students to log in, complete activities, and track progress
 - Copy an example to the real filename and edit. Scripts auto-source them:
   - Local: `scripts/deploy-local.sh` loads `.env.local` if present and passes it to Compose.
   - DigitalOcean: `scripts/deploy-digitalocean.sh` loads `.env.do` if present (override with `ENV_FILE_CANDIDATE=/path/file`).
+### UI Principles
+- One screen per logical action: simple, focused forms for login, signup, forgot password, and reset password.
+- Clear, friendly language that helps students succeed; add small touches of charm (short, encouraging copy) without getting in the way.
+- Minimal navigation: a compact header, and top‑level actions only when signed in.
+- Accessibility and clarity over flash: legible contrast, large hit targets, and obvious affordances.

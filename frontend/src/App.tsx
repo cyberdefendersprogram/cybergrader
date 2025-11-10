@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, API_BASE, HttpError } from "./api";
+import { api, API_BASE, HttpError, setAuthToken } from "./api";
 import { ExamsSection } from "./components/ExamsSection";
 import { DashboardSection } from "./components/DashboardSection";
 import { LabsSection } from "./components/LabsSection";
 import { LoginForm } from "./components/LoginForm";
+import { SignupForm } from "./components/SignupForm";
+import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
+import { ResetPasswordForm } from "./components/ResetPasswordForm";
 import { NotesSection } from "./components/NotesSection";
 import { QuizzesSection } from "./components/QuizzesSection";
 import type {
@@ -22,6 +25,8 @@ interface ToastState {
 
 export default function App() {
   const [user, setUser] = useState<LoginResponse | null>(null);
+  const [view, setView] = useState<"home" | "login" | "signup" | "forgot" | "reset">("login");
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [labs, setLabs] = useState<LabStatus[]>([]);
   const [quizzes, setQuizzes] = useState<QuizDefinition[]>([]);
   const [exams, setExams] = useState<ExamDefinition[]>([]);
@@ -29,11 +34,42 @@ export default function App() {
   const [note, setNote] = useState<NoteDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [meInfo, setMeInfo] = useState<{ email: string; role: string; student_id: string | null } | null>(null);
 
   const welcomeMessage = useMemo(() => {
     if (!user) return "";
     return `Welcome back, ${user.user_id}`;
   }, [user]);
+
+  useEffect(() => {
+    // Simple path-based view selection
+    const syncView = () => {
+      const path = window.location.pathname;
+      if (path.startsWith("/reset-password")) {
+        const params = new URLSearchParams(window.location.search);
+        setResetToken(params.get("token"));
+        setView("reset");
+      } else if (path.startsWith("/signup")) {
+        setView("signup");
+      } else if (path.startsWith("/forgot-password")) {
+        setView("forgot");
+      } else if (path.startsWith("/login")) {
+        setView("login");
+      } else {
+        setView("home");
+      }
+    };
+    syncView();
+    const onPop = () => syncView();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const navigate = (path: string) => {
+    window.history.pushState({}, "", path);
+    const event = new PopStateEvent("popstate");
+    window.dispatchEvent(event);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -66,8 +102,13 @@ export default function App() {
     try {
       const payload = await api.login(credentials);
       setUser(payload);
-      setToast({ kind: "success", message: `Signed in as ${payload.user_id} (${payload.role})` });
+      setAuthToken(payload.token);
+      localStorage.setItem("cg_token", payload.token);
+      setToast({ kind: "success", message: `Signed in as ${credentials.email}` });
+      const me = await api.me().catch(() => null);
+      if (me) setMeInfo(me);
       await loadContent(payload.user_id);
+      navigate("/");
     } finally {
       setIsLoading(false);
     }
@@ -127,14 +168,42 @@ export default function App() {
     [user, loadContent]
   );
 
+  const handleSignup = useCallback(async (credentials: { email: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      const payload = await api.signup(credentials);
+      setUser(payload);
+      setAuthToken(payload.token);
+      localStorage.setItem("cg_token", payload.token);
+      setToast({ kind: "success", message: `Welcome, ${credentials.email}!` });
+      const me = await api.me().catch(() => null);
+      if (me) setMeInfo(me);
+      await loadContent(payload.user_id);
+      navigate("/");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadContent]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("cg_token");
+    if (token) {
+      setAuthToken(token);
+      api.me().then(setMeInfo).catch(() => undefined);
+    }
+  }, []);
+
   const handleSignOut = useCallback(() => {
     setUser(null);
+    setAuthToken(null);
+    localStorage.removeItem("cg_token");
     setLabs([]);
     setQuizzes([]);
     setExams([]);
     setSummary(null);
     setNote(null);
     setToast({ kind: "info", message: "Signed out" });
+    navigate("/login");
   }, []);
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -184,7 +253,54 @@ export default function App() {
           </div>
         )}
 
-        {!user && <LoginForm onSubmit={handleLogin} isSubmitting={isLoading} />}
+        {!user && (
+          <>
+            {view === "login" && (
+              <LoginForm
+                onSubmit={handleLogin}
+                isSubmitting={isLoading}
+                onForgotPassword={(email) => {
+                  navigate(`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`);
+                }}
+                onSignupNavigate={() => navigate("/signup")}
+              />
+            )}
+            {view === "signup" && (
+              <SignupForm onSubmit={handleSignup} isSubmitting={isLoading} onLoginNavigate={() => navigate("/login")} />
+            )}
+            {view === "forgot" && (
+              <ForgotPasswordForm
+                isSubmitting={isLoading}
+                onBack={() => navigate("/login")}
+                onRequest={async (email) => {
+                  setIsLoading(true);
+                  try {
+                    await api.requestPasswordReset(email);
+                    setToast({ kind: "success", message: "If registered, we emailed you a reset link" });
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
+            )}
+            {view === "reset" && resetToken && (
+              <ResetPasswordForm
+                token={resetToken}
+                isSubmitting={isLoading}
+                onReset={async (token, newPassword) => {
+                  setIsLoading(true);
+                  try {
+                    await api.resetPassword(token, newPassword);
+                    setToast({ kind: "success", message: "Password updated. Please sign in." });
+                    navigate("/login");
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
+            )}
+          </>
+        )}
 
         {user && (
           <>
@@ -210,6 +326,41 @@ export default function App() {
                 </button>
               </div>
             </nav>
+
+            {/* Student ID prompt (one friendly nudge) */}
+            {meInfo && meInfo.role === "student" && !meInfo.student_id && (
+              <div className="card login-card" style={{ marginBottom: "1rem" }}>
+                <h3 style={{ marginTop: 0 }}>Add your Student ID</h3>
+                <p style={{ margin: 0, color: "var(--text-secondary)" }}>
+                  Just once and you're golden. Promise.
+                </p>
+                <form
+                  className="login-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const input = (e.currentTarget.elements.namedItem("student_id") as HTMLInputElement) || null;
+                    if (!input) return;
+                    const value = input.value.trim();
+                    if (!value) return;
+                    setIsLoading(true);
+                    try {
+                      await api.setStudentId(value);
+                      const me = await api.me().catch(() => null);
+                      if (me) setMeInfo(me);
+                      setToast({ kind: "success", message: "Student ID saved" });
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                >
+                  <label>
+                    Student ID
+                    <input name="student_id" placeholder="e.g., A12345678" />
+                  </label>
+                  <button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Save"}</button>
+                </form>
+              </div>
+            )}
 
             <div className="content__grid">
               <QuizzesSection quizzes={quizzes} onSubmitQuiz={handleQuizSubmission} isSubmitting={isLoading} />

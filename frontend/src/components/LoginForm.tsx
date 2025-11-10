@@ -4,11 +4,13 @@ import type { LoginRequest } from "../types";
 interface LoginFormProps {
   onSubmit: (payload: LoginRequest) => Promise<void>;
   isSubmitting?: boolean;
+  onForgotPassword?: (email: string) => void;
+  onSignupNavigate?: () => void;
 }
 
-export function LoginForm({ onSubmit, isSubmitting }: LoginFormProps) {
-  const [email, setEmail] = useState("alice@student.edu");
-  const [password, setPassword] = useState("password");
+export function LoginForm({ onSubmit, isSubmitting, onForgotPassword, onSignupNavigate }: LoginFormProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -25,10 +27,10 @@ export function LoginForm({ onSubmit, isSubmitting }: LoginFormProps) {
   return (
     <div className="card login-card">
       <div>
-        <span className="badge">Demo environment</span>
+        <span className="badge">Welcome back</span>
         <h2>Sign in to Cyber Grader</h2>
         <p style={{ margin: 0, color: "var(--text-secondary)" }}>
-          Use one of the sample accounts below to explore the full experience.
+          We saved you a seat. Enter your email and password to continue.
         </p>
       </div>
       <form className="login-form" onSubmit={handleSubmit}>
@@ -57,11 +59,17 @@ export function LoginForm({ onSubmit, isSubmitting }: LoginFormProps) {
         </button>
         {error && <p className="toast toast--error" style={{ position: "static" }}>{error}</p>}
       </form>
-      <div style={{ display: "grid", gap: "0.4rem", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-        <strong style={{ color: "var(--text-primary)" }}>Sample roles</strong>
-        <span>alice@student.edu — Student</span>
-        <span>sam@staff.edu — Staff</span>
-        <span>ada@admin.edu — Admin</span>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => (onForgotPassword ? onForgotPassword(email) : undefined)}
+        >
+          Forgot password?
+        </button>
+        <button type="button" className="secondary-button" onClick={onSignupNavigate}>
+          Create account
+        </button>
       </div>
     </div>
   );
