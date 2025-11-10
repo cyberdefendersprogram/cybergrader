@@ -9,6 +9,7 @@ import { ForgotPasswordForm } from "./components/ForgotPasswordForm";
 import { ResetPasswordForm } from "./components/ResetPasswordForm";
 import { Onboarding } from "./components/Onboarding";
 import { NotesSection } from "./components/NotesSection";
+import { NotesList } from "./components/NotesList";
 import { QuizzesSection } from "./components/QuizzesSection";
 import type {
   DashboardSummary,
@@ -26,8 +27,12 @@ interface ToastState {
 
 export default function App() {
   const [user, setUser] = useState<LoginResponse | null>(null);
-  const [view, setView] = useState<"home" | "login" | "signup" | "forgot" | "reset">("login");
+  const [view, setView] = useState<
+    | "home" | "login" | "signup" | "forgot" | "reset"
+    | "dashboard" | "labs" | "quizzes" | "exams" | "activity" | "notes" | "note"
+  >("home");
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [noteName, setNoteName] = useState<string | null>(null);
   const [labs, setLabs] = useState<LabStatus[]>([]);
   const [quizzes, setQuizzes] = useState<QuizDefinition[]>([]);
   const [exams, setExams] = useState<ExamDefinition[]>([]);
@@ -50,6 +55,24 @@ export default function App() {
         const params = new URLSearchParams(window.location.search);
         setResetToken(params.get("token"));
         setView("reset");
+      } else if (path === "/" && user) {
+        setView("dashboard");
+      } else if (path === "/dashboard") {
+        setView("dashboard");
+      } else if (path === "/labs") {
+        setView("labs");
+      } else if (path === "/quizzes") {
+        setView("quizzes");
+      } else if (path === "/exams") {
+        setView("exams");
+      } else if (path === "/activity") {
+        setView("activity");
+      } else if (path === "/notes") {
+        setView("notes");
+      } else if (path.startsWith("/notes/")) {
+        const n = path.split("/")[2] || null;
+        setNoteName(n);
+        setView("note");
       } else if (path.startsWith("/signup")) {
         setView("signup");
       } else if (path.startsWith("/forgot-password")) {
@@ -57,7 +80,7 @@ export default function App() {
       } else if (path.startsWith("/login")) {
         setView("login");
       } else {
-        setView("home");
+        setView(user ? "dashboard" : "home");
       }
     };
     syncView();
@@ -77,6 +100,16 @@ export default function App() {
     const timeout = window.setTimeout(() => setToast(null), 4000);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  // Fetch individual note when viewing note detail
+  useEffect(() => {
+    if (view === "note" && noteName) {
+      api
+        .getNote(noteName)
+        .then((doc) => setNote(doc))
+        .catch(() => setNote(null));
+    }
+  }, [view, noteName]);
 
   const loadContent = useCallback(async (userId: string) => {
     setIsLoading(true);
@@ -310,17 +343,54 @@ export default function App() {
           <>
             <nav className="subnav" aria-label="User navigation">
               <div className="subnav__info">
-                <span className="badge">{user.role}</span>
+                <span className="badge">{meInfo?.role ?? user.role}</span>
                 <h2 style={{ margin: "0.25rem 0 0" }}>{welcomeMessage}</h2>
                 <p style={{ margin: 0, color: "var(--text-secondary)" }}>
                   Explore the content areas below and submit progress updates in real time.
                 </p>
               </div>
               <div className="subnav__actions">
+                <button type="button" className="secondary-button" onClick={() => navigate("/dashboard")}>
+                  Dashboard
+                </button>
+                <button type="button" className="secondary-button" onClick={() => navigate("/labs")}>Labs</button>
+                <button type="button" className="secondary-button" onClick={() => navigate("/quizzes")}>Quizzes</button>
+                <button type="button" className="secondary-button" onClick={() => navigate("/exams")}>Exams</button>
+                <button type="button" className="secondary-button" onClick={() => navigate("/activity")}>Activity</button>
+                <button type="button" className="secondary-button" onClick={() => navigate("/notes")}>Notes</button>
                 {(user.role === "staff" || user.role === "admin") && (
-                  <button type="button" className="primary-button" onClick={handleSync} disabled={isSyncing}>
-                    {isSyncing ? "Syncing..." : "Sync content"}
-                  </button>
+                  <>
+                    <button type="button" className="primary-button" onClick={handleSync} disabled={isSyncing}>
+                      {isSyncing ? "Syncing..." : "Sync content"}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={async () => {
+                        setIsLoading(true);
+                        try {
+                          const data = await api.exportScores();
+                          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `scores-export-${Date.now()}.json`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                          setToast({ kind: "success", message: "Export ready (JSON downloaded)" });
+                        } catch (err) {
+                          const message = err instanceof Error ? err.message : "Export failed";
+                          setToast({ kind: "error", message });
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                    >
+                      Export scores
+                    </button>
+                  </>
                 )}
                 <button type="button" className="secondary-button" onClick={() => loadContent(user.user_id)}>
                   {isLoading ? "Refreshing..." : "Refresh data"}
@@ -369,13 +439,19 @@ export default function App() {
               </div>
             )}
 
-            <div className="content__grid">
-              <QuizzesSection quizzes={quizzes} onSubmitQuiz={handleQuizSubmission} isSubmitting={isLoading} />
+            {view === "dashboard" && <DashboardSection summary={summary} />}
+            {view === "labs" && (
               <LabsSection labs={labs} onSubmitFlag={handleFlagSubmission} isSubmitting={isLoading} />
+            )}
+            {view === "quizzes" && (
+              <QuizzesSection quizzes={quizzes} onSubmitQuiz={handleQuizSubmission} isSubmitting={isLoading} />
+            )}
+            {view === "exams" && (
               <ExamsSection exams={exams} onSubmitExam={handleExamSubmission} isSubmitting={isLoading} />
-              <DashboardSection summary={summary} />
-              <NotesSection note={note} />
-            </div>
+            )}
+            {view === "activity" && <DashboardSection summary={summary} />}
+            {view === "notes" && <NotesList navigate={navigate} />}
+            {view === "note" && note && <NotesSection note={note} />}
           </>
         )}
       </main>

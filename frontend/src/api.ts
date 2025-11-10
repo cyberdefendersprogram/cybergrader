@@ -132,6 +132,7 @@ export const api = {
   dashboard: (userId: string) => request<DashboardSummary>(`/dashboard/${encodeURIComponent(userId)}`),
   getNote: (note: string) => request<NoteDocument>(`/notes/${encodeURIComponent(note)}`),
   listNotes: () => request<NoteIndex>("/notes"),
+  exportScores: () => request<any>("/admin/export-scores"),
   syncContent: (role: string) =>
     request<SyncResponse>(`/admin/sync`, {
       method: "POST",
