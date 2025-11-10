@@ -8,4 +8,5 @@ supabase==2.3.5
 psycopg[binary]==3.1.18
 passlib[bcrypt]==1.7.4
 PyJWT==2.9.0
-httpx==0.27.2
+# Pin httpx to a version compatible with supabase-py
+httpx==0.24.1
