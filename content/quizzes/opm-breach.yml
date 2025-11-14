@@ -1,0 +1,55 @@
+id: quiz-opm-breach
+title: OPM Breach Case Study
+version: 1.0.0
+questions:
+  - id: q1
+    prompt: In the 2015 OPM breach, which category best describes the most sensitive records stolen?
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Routine payroll records only
+      - key: b
+        label: Background investigation files (e.g., SF‑86 forms)
+      - key: c
+        label: Only anonymized statistical datasets
+    answer: b
+    points: 2
+
+  - id: q2
+    prompt: Approximately how many individuals had their background investigation data compromised in the OPM breach?
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Around 2 million
+      - key: b
+        label: Around 10 million
+      - key: c
+        label: Around 21.5 million
+    answer: c
+    points: 2
+
+  - id: q3
+    prompt: Name one root cause that enabled the OPM breach to have such broad impact (e.g., a missing control or systemic weakness).
+    type: short_answer
+    answer: lack of multi-factor authentication
+    points: 2
+
+  - id: q4
+    prompt: Which nation‑state is most commonly attributed as the actor behind the OPM breach?
+    type: multiple_choice
+    choices:
+      - key: a
+        label: Russia
+      - key: b
+        label: China
+      - key: c
+        label: North Korea
+    answer: b
+    points: 2
+
+  - id: q5
+    prompt: Besides personnel and investigation files, what biometric data type was publicly reported as partially compromised?
+    type: short_answer
+    answer: fingerprints
+    points: 2
+
